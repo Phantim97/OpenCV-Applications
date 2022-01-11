@@ -1,0 +1,11 @@
+cmake_minimum_required (VERSION 3.8)
+project(VisionApplications LANGUAGES CXX)
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
+	set(OpenCV_DIR $ENV{LIBS_PATH}/opencv-master/out/install/x64-Release)
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+	set(OpenCV_DIR $ENV{LIBS_PATH}/opencv-master/out/install/x64-Debug)
+endif()
+
+add_subdirectory("Face Landmark Detection")
+add_subdirectory("Face Landmark Applications")
