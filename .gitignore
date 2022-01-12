@@ -352,3 +352,6 @@ MigrationBackup/
 /out
 */out
 /CMakeSettings.json
+/images
+/models
+/results
