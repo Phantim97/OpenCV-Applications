@@ -7,7 +7,8 @@
 #include <opencv2/highgui.hpp>
 #include <fstream>
 #include <iostream>
-#include <string>
+
+#include "env_util.h"
 
 void write_landmarks_to_file(dlib::full_object_detection& landmarks, const std::string& filename)
 {
@@ -72,28 +73,22 @@ void render_face(
 
 void dlib_detect_main()
 {
-    std::cout << "Paths?";
-    std::string model_path = getenv("MODELS_PATH");
-    std::string data_path = getenv("DATA_PATH");
-
-    std::cout << "Here?\n";
+    std::string model_path = util::get_model_path();
+    std::string data_path = util::get_data_path();
 
     // Get the face detector
     dlib::frontal_face_detector face_detector = dlib::get_frontal_face_detector();
 
     // The landmark detector is implemented in the shape_predictor class
     dlib::shape_predictor landmark_detector;
-    std::cout << "Load: " << model_path << '\n';
-    std::string predictor_path(model_path + "/dlib_models/shape_predictor_68_face_landmarks.dat");
-    std::cout << "Loaded";
+    std::string predictor_path(model_path + "dlib_models/shape_predictor_68_face_landmarks.dat");
+
     // Load the landmark model
     dlib::deserialize(predictor_path) >> landmark_detector;
-
-    std::cout << "Can you read?\n";
+    
     // Read Image
-    std::string image_filename(data_path + "/images/family.jpg");
+    std::string image_filename(data_path + "images/family.jpg");
     cv::Mat img = cv::imread(image_filename);
-    std::cout << "You can read\n";
 
     // landmarks will be stored in results/family_0.txt
     std::string landmarks_basename("results/family");
@@ -140,5 +135,5 @@ void dlib_detect_main()
     std::cout << "Saving output image to " << output_filename << '\n';
     cv::imwrite(output_filename, img);
     cv::imshow("Image", img);
-    cv::waitKey(250);
+    cv::waitKey(5000);
 }
