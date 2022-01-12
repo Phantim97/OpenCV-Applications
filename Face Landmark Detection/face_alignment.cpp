@@ -6,7 +6,7 @@
 #include <opencv2/highgui.hpp>
 #include "env_util.h"
 
-void similarityTransform(const std::vector<cv::Point2f>& vector, const std::vector<cv::Point2f>& points, const cv::Mat& mat);
+void similarityTransform(const std::vector<cv::Point2f>& vector, const std::vector<cv::Point2f>& points, const cv::Mat& mat)
 {
 	//Internal course function
 	return;
@@ -51,7 +51,7 @@ void normalizeImagesAndLandmarks(const cv::Size out_size, const cv::Mat& img_in,
 	cv::transform(points_in, points_out, tform);
 }
 
-std::vector<cv::Point2f> getLandmarks(const dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& shape_predictor, const cv::Mat& mat);
+std::vector<cv::Point2f> getLandmarks(const dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& shape_predictor, const cv::Mat& mat)
 {
 	std::cout << "Internal course function just here for compiling purpose\n";
 	return std::vector<cv::Point2f>();
