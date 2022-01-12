@@ -2,7 +2,6 @@
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
-#include <dlib/gui_widgets.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <fstream>
