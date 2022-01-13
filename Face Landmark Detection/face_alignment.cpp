@@ -6,13 +6,33 @@
 #include <opencv2/highgui.hpp>
 #include "env_util.h"
 
-void similarityTransform(const std::vector<cv::Point2f>& vector, const std::vector<cv::Point2f>& points, const cv::Mat& mat)
+#define M_PI 3.14159
+
+void similarity_transform(const std::vector<cv::Point2f>& in_points, const std::vector<cv::Point2f>& out_points, cv::Mat& tform)
 {
-	//Internal course function
-	return;
+
+	double s60 = sin(60 * M_PI / 180.0);
+	double c60 = cos(60 * M_PI / 180.0);
+
+	std::vector<cv::Point2f> inPts = in_points;
+	std::vector<cv::Point2f> outPts = out_points;
+
+	// Placeholder for the third point.
+	inPts.emplace_back(0, 0);
+	outPts.emplace_back(0, 0);
+
+	// The third point is calculated so that the three points make an equilateral triangle
+	inPts[2].x = c60 * (inPts[0].x - inPts[1].x) - s60 * (inPts[0].y - inPts[1].y) + inPts[1].x;
+	inPts[2].y = s60 * (inPts[0].x - inPts[1].x) + c60 * (inPts[0].y - inPts[1].y) + inPts[1].y;
+
+	outPts[2].x = c60 * (outPts[0].x - outPts[1].x) - s60 * (outPts[0].y - outPts[1].y) + outPts[1].x;
+	outPts[2].y = s60 * (outPts[0].x - outPts[1].x) + c60 * (outPts[0].y - outPts[1].y) + outPts[1].y;
+
+	// Now we can use estimateRigidTransform for calculating the similarity transform.
+	tform = cv::estimateAffinePartial2D(inPts, outPts);
 }
 
-void normalizeImagesAndLandmarks(const cv::Size out_size, const cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, std::vector<cv::Point2f>& points_out)
+void normalize_images_and_landmarks(const cv::Size out_size, const cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, std::vector<cv::Point2f>& points_out)
 {
 	const int h = out_size.height;
 	const int w = out_size.width;
@@ -41,7 +61,7 @@ void normalizeImagesAndLandmarks(const cv::Size out_size, const cv::Mat& img_in,
 
 	// Calculate similarity transform
 	cv::Mat tform;
-	similarityTransform(eyecorner_src, eyecorner_dst, tform);
+	similarity_transform(eyecorner_src, eyecorner_dst, tform);
 
 	// Apply similarity transform to input image
 	img_out = cv::Mat::zeros(h, w, CV_32FC3);
@@ -51,10 +71,10 @@ void normalizeImagesAndLandmarks(const cv::Size out_size, const cv::Mat& img_in,
 	cv::transform(points_in, points_out, tform);
 }
 
-std::vector<cv::Point2f> getLandmarks(const dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& shape_predictor, const cv::Mat& mat)
+std::vector<cv::Point2f> get_landmarks(const dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& shape_predictor, const cv::Mat& mat)
 {
 	std::cout << "Internal course function just here for compiling purpose\n";
-	return std::vector<cv::Point2f>();
+	return {};
 }
 
 void face_alignment_main()
@@ -69,7 +89,7 @@ void face_alignment_main()
 	//Read image
 	cv::Mat img = cv::imread(util::get_data_path() + "images/face2.png");
 	// Detect landmarks
-	std::vector<cv::Point2f> points = getLandmarks(faceDetector, landmarkDetector, img);
+	std::vector<cv::Point2f> points = get_landmarks(faceDetector, landmarkDetector, img);
 
 	// Convert image to floating point in the range 0 to 1
 	img.convertTo(img, CV_32FC3, 1 / 255.0);
@@ -78,6 +98,6 @@ void face_alignment_main()
 	// Variables for storing normalized image
 	cv::Mat imNorm;
 	// Normalize image to output coordinates.
-	normalizeImagesAndLandmarks(size, img, imNorm, points, points);
+	normalize_images_and_landmarks(size, img, imNorm, points, points);
 	imNorm.convertTo(imNorm, CV_8UC3, 255);
 }

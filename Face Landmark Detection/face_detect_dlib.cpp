@@ -4,6 +4,7 @@
 #include <dlib/image_processing.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <fstream>
 #include <iostream>
 
@@ -135,4 +136,131 @@ void dlib_detect_main()
     cv::imwrite(output_filename, img);
     cv::imshow("Image", img);
     cv::waitKey(5000);
+}
+
+#define RESIZE_HEIGHT 480
+#define SKIP_FRAMES 2
+#define OPENCV_FACE_RENDER
+
+void render_face
+(
+    cv::Mat& img, // Image to draw the points on
+    const std::vector<cv::Point2f>& points, // Vector of points
+    cv::Scalar color, // color points
+    int radius = 3) // Radius of points.
+{
+
+    for (int i = 0; i < points.size(); i++)
+    {
+        cv::circle(img, points[i], radius, color, -1);
+    }
+}
+
+void dlib_fast_face_detect()
+{
+	std::string PREDICTOR_PATH = util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat";
+
+    // Create an imshow window
+	std::string win_name("Fast Facial Landmark Detector");
+    cv::namedWindow(win_name, cv::WINDOW_NORMAL);
+
+    // Create a VideoCapture object
+    cv::VideoCapture cap(0);
+    // Check if OpenCV is able to read feed from camera
+    if (!cap.isOpened())
+    {
+	    std::cerr << "Unable to connect to camera\n";
+        return;
+    }
+
+    // Just a place holder. Actual value calculated after 100 frames.
+    double fps = 120.0;
+
+    // Get first frame and allocate memory.
+    cv::Mat im;
+    cap >> im;
+
+    // We will use a fixed height image as input to face detector
+    cv::Mat im_small, imDisplay;
+    float height = im.rows;
+    // calculate resize scale
+    float resize_scale = height / RESIZE_HEIGHT;
+    cv::Size size = im.size();
+
+    // Load face detection and pose estimation models
+	dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+	dlib::shape_predictor predictor;
+	dlib::deserialize(PREDICTOR_PATH) >> predictor;
+
+    // initiate the tickCounter
+    double t = static_cast<double>(cv::getTickCount());
+    int count = 0;
+
+    std::vector<dlib::rectangle> faces;
+    // Grab and process frames until the main window is closed by the user.
+    while (1)
+    {
+        if (count == 0) t = cv::getTickCount();
+
+        // Grab a frame
+        cap >> im;
+        // create imSmall by resizing image by resize scale
+        cv::resize(im, im_small, cv::Size(), 1.0 / resize_scale, 1.0 / resize_scale);
+        // Change to dlib's image format. No memory is copied
+        dlib::cv_image<dlib::bgr_pixel> cimgSmall(im_small);
+        dlib::cv_image<dlib::bgr_pixel> cimg(im);
+
+        // Process frames at an interval of SKIP_FRAMES.
+        // This value should be set depending on your system hardware
+        // and camera fps.
+        // To reduce computations, this value should be increased
+        if (count % SKIP_FRAMES == 0)
+        {
+            // Detect faces
+            faces = detector(cimgSmall);
+        }
+
+        // Find facial landmarks for each face.
+        std::vector<dlib::full_object_detection> shapes;
+        // Iterate over faces
+        for (unsigned long i = 0; i < faces.size(); ++i)
+        {
+            // Since we ran face detection on a resized image,
+            // we will scale up coordinates of face rectangle
+            dlib::rectangle r(faces[i].left() * resize_scale,faces[i].top() * resize_scale,faces[i].right() * resize_scale,faces[i].bottom() * resize_scale);
+
+            // Find face landmarks by providing reactangle for each face
+            dlib::full_object_detection shape = predictor(cimg, r);
+            shapes.push_back(shape);
+            // Draw facial landmarks
+            render_face(im, shape);
+        }
+
+        // Put fps at which we are processing camera feed on frame
+        cv::putText(im, cv::format("fps %.2f", fps), cv::Point(50, size.height - 50), cv::FONT_HERSHEY_COMPLEX, 1.5, cv::Scalar(0, 0, 255), 3);
+
+        // Display it all on the screen
+        cv::imshow(win_name, im);
+
+        // Wait for keypress
+        char key = cv::waitKey(1);
+        if (key == 27) // ESC
+        {
+            // If ESC is pressed, break out of loop.
+            break;
+        }
+
+        // increment frame counter
+        count++;
+        // calculate fps after each 100 frames are processed
+        if (count == 100)
+        {
+            t = (static_cast<double>(cv::getTickCount()) - t) / cv::getTickFrequency();
+            fps = 100.0 / t;
+            count = 0;
+        }
+    }
+
+    cap.release();
+    cv::destroyAllWindows();
 }

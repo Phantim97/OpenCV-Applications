@@ -2,6 +2,6 @@
 
 int main()
 {
-	dlib_detect_main();
+	dlib_fast_face_detect();
 	return 0;
 }
