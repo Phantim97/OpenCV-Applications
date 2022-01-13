@@ -2,6 +2,7 @@
 
 int main()
 {
-	dlib_fast_face_detect();
+	//dlib_fast_face_detect();
+	landmark_stabilization();
 	return 0;
 }
