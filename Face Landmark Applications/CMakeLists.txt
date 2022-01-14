@@ -10,5 +10,5 @@ find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_LIB_DIR})
 
 # Add source to this project's executable.
-add_executable(FaceApp "main.cpp")
+add_executable(FaceApp "main.cpp" "alpha_blending.cpp" "alpha_blending.h" "env_util.cpp" "env_util.h" "triangle_warp.h" "traingle_warp.cpp" "delaunay.cpp" "delaunay.h")
 target_link_libraries(FaceApp ${OpenCV_LIBS})
