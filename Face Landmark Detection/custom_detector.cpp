@@ -66,7 +66,6 @@ void custom_detector_main()
     }
 
     const std::string point_models[] = { "33", "70" };
-
 	const std::string face_landmark_data_dir = util::get_dataset_path() + "facial_landmark_data";
 	const std::string num_points = point_models[opt-1];
 	const std::string model_name = "shape_predictor_" + num_points + "_face_landmarks.dat";
@@ -111,11 +110,11 @@ void custom_detector_main()
     // Note that there is an optional 4th argument that lets us normalize the
     // distances.  Here we are normalizing the error using the interocular
     // distance, as is customary when evaluating face landmarking systems.
-    std::cout << "mean training error: " << test_shape_predictor(sp, images_train, faces_train, get_interocular_distances(faces_train)) << '\n';
+    std::cout << "Mean training error: " << test_shape_predictor(sp, images_train, faces_train, get_interocular_distances(faces_train)) << '\n';
 
     // The real test is to see how well it does on data it wasn't trained
     // on.
-    std::cout << "mean testing error:  " << test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << '\n';
+    std::cout << "Mean testing error:  " << test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << '\n';
 
     // Finally, we save the model to disk so we can use it later.
     dlib::serialize(model_path) << sp;
