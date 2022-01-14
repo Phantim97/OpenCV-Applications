@@ -16,4 +16,11 @@ namespace util
 		path += '/';
 		return path;
 	}
+
+	std::string get_dataset_path()
+	{
+		std::string path = getenv("DATASET_PATH");
+		path += '/';
+		return path;
+	}
 }

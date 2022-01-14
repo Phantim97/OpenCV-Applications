@@ -15,6 +15,6 @@ include_directories(${DLIB_INCLUDE_DIRECTORY})
 include_directories(${OpenCV_LIB_DIR})
 
 # Add source to this project's executable.
-add_executable(FaceDetect "main.cpp" "face_detect_dlib_.h" "face_detect_dlib.cpp" "face_alignment.h" "face_alignment.cpp" "env_util.h" "env_util.cpp")
+add_executable(FaceDetect "main.cpp" "face_detect_dlib_.h" "face_detect_dlib.cpp" "face_alignment.h" "face_alignment.cpp" "env_util.h" "env_util.cpp" "custom_detector.cpp" "custom_detector.h")
 target_link_libraries(FaceDetect ${OpenCV_LIBS})
 target_link_libraries(FaceDetect ${DLIB_LIBRARIES} dlib::dlib)
