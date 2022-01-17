@@ -254,7 +254,7 @@ void dlib_fast_face_detect()
 }
 
 // Constrains points to be inside boundary
-void constrainPoint(cv::Point2f& p, const cv::Size& sz)
+void constrain_point(cv::Point2f& p, const cv::Size& sz)
 {
     p.x = cv::min(cv::max(static_cast<double>(p.x), 0.0), static_cast<double>(sz.width - 1));
     p.y = cv::min(cv::max(static_cast<double>(p.y), 0.0), static_cast<double>(sz.height - 1));
