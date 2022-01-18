@@ -9,12 +9,12 @@
 #include "env_util.h"
 #include "delaunay.h"
 
-#define M_PI 3.1415928
+constexpr double M_PI = 3.1415928;
 
 // Compute similarity transform given two sets of two points.
 // OpenCV requires 3 pairs of corresponding points.
 // We are faking the third one.
-void similarity_transform(const std::vector<cv::Point2f>& in_points, const std::vector<cv::Point2f>& out_points, cv::Mat& tform)
+static void similarity_transform(const std::vector<cv::Point2f>& in_points, const std::vector<cv::Point2f>& out_points, cv::Mat& tform)
 {
 	const double s60 = sin(60 * M_PI / 180.0);
 	const double c60 = cos(60 * M_PI / 180.0);
@@ -37,7 +37,7 @@ void similarity_transform(const std::vector<cv::Point2f>& in_points, const std::
 	tform = cv::estimateAffinePartial2D(in_pts, out_pts);
 }
 
-void normalize_images_and_landmarks(const cv::Size& out_size, const cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, std::vector<cv::Point2f>& points_out)
+static void normalize_images_and_landmarks(const cv::Size& out_size, const cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, std::vector<cv::Point2f>& points_out)
 {
 	const int h = out_size.height;
 	const int w = out_size.width;
@@ -68,16 +68,16 @@ void normalize_images_and_landmarks(const cv::Size& out_size, const cv::Mat& img
 }
 
 // Constrains points to be inside boundary
-void constrain_point(cv::Point2f& p, const cv::Size& sz)
+static void constrain_point(cv::Point2f& p, const cv::Size& sz)
 {
 	p.x = std::min(std::max(static_cast<double>(p.x), 0.0), static_cast<double>(sz.width - 1));
 	p.y = std::min(std::max(static_cast<double>(p.y), 0.0), static_cast<double>(sz.height - 1));
 }
 
-void warp_image(cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, const std::vector<cv::Point2f>& points_out, const std::vector<std::vector<int>>& delaunay_tri)
+static void warp_image(cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, const std::vector<cv::Point2f>& points_out, const std::vector<std::vector<int>>& delaunay_tri)
 {
 	// Specify the output image the same size and type as the input image.
-	cv::Size size = img_in.size();
+	const cv::Size size = img_in.size();
 	img_out = cv::Mat::zeros(size, img_in.type());
 
 	// Warp each input triangle to output triangle.
@@ -109,7 +109,7 @@ void warp_image(cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f
 	}
 }
 
-void read_file_names(std::string string, std::vector<std::string>& file_vector)
+static void read_file_names(const std::string& string, std::vector<std::string>& file_vector)
 {
 	//Get all filenames in directory
 	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(string))
@@ -119,7 +119,7 @@ void read_file_names(std::string string, std::vector<std::string>& file_vector)
 }
 
 // Read landmark points stored in text files
-std::vector<cv::Point2f> get_saved_points(const std::string& points_file_name)
+static std::vector<cv::Point2f> get_saved_points(const std::string& points_file_name)
 {
 	std::vector<cv::Point2f> points;
 	std::ifstream ifs(points_file_name.c_str());
@@ -139,7 +139,7 @@ std::vector<cv::Point2f> get_saved_points(const std::string& points_file_name)
 	return points;
 }
 
-void get_eight_boundary_points(const cv::Size& size, std::vector<cv::Point2f>& boundary_pts)
+static void get_eight_boundary_points(const cv::Size& size, std::vector<cv::Point2f>& boundary_pts)
 {
 	const int h = size.height;
 	const int w = size.width;
@@ -155,12 +155,12 @@ void get_eight_boundary_points(const cv::Size& size, std::vector<cv::Point2f>& b
 }
 
 // Compare dlib rectangle
-bool rect_area_comparator(const dlib::rectangle& r1, const dlib::rectangle& r2)
+static bool rect_area_comparator(const dlib::rectangle& r1, const dlib::rectangle& r2)
 {
 	return r1.area() < r2.area();
 }
 
-void landmarks_to_points(dlib::full_object_detection& landmarks, std::vector<cv::Point2f>& points)
+static void landmarks_to_points(dlib::full_object_detection& landmarks, std::vector<cv::Point2f>& points)
 {
 	// Loop over all landmark points
 	for (int i = 0; i < landmarks.num_parts(); i++)
@@ -170,7 +170,7 @@ void landmarks_to_points(dlib::full_object_detection& landmarks, std::vector<cv:
 	}
 }
 
-std::vector<cv::Point2f> getLandmarks(dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& landmark_detector, const cv::Mat& img, const float FACE_DOWNSAMPLE_RATIO = 1)
+static std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& landmark_detector, const cv::Mat& img, const float FACE_DOWNSAMPLE_RATIO = 1)
 {
 	std::vector<cv::Point2f> points;
 
@@ -215,7 +215,7 @@ void face_averaging_main()
 	// Load the landmark model
 	dlib::deserialize(util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat") >> landmark_detector;
 	// Directory containing images.
-	std::string dir_name = util::get_data_path() + "images/people";
+	std::string dir_name = util::get_data_path() + "images/people/group_d";
 
 	// Add slash to directory name if missing
 	if (!dir_name.empty() && dir_name.back() != '/')
@@ -249,7 +249,7 @@ void face_averaging_main()
 		}
 		else
 		{
-			std::vector<cv::Point2f> points = getLandmarks(face_detector, landmark_detector, img);
+			std::vector<cv::Point2f> points = get_landmarks(face_detector, landmark_detector, img);
 			//std::vector<cv::Point2f> points = get_saved_points(image_names[i].substr(0, image_names[i].length() - 4) + ".txt");
 
 			if (points.size() > 0)
@@ -337,4 +337,162 @@ void face_averaging_main()
 
 	cv::imshow("Output", output);
 	cv::waitKey(5000);
+}
+
+static std::string remove_extension(const std::string& file)
+{
+	//Remove extension of image name
+	const size_t extension_marker = file.find_last_of(".");
+	const std::string file_name = file.substr(0, extension_marker);
+
+	std::string extensionless_name = file_name + ".txt";
+	return extensionless_name;
+}
+
+static bool landmark_file_found(const std::string& file)
+{
+	//Remove extension of image name
+	const std::string file_name = remove_extension(file);
+	const std::string landmark_file = file_name + ".txt";
+
+	const std::fstream fs(landmark_file);
+	return fs.good();
+}
+
+void face_morph_main()
+{
+	// Get the face detector
+	dlib::frontal_face_detector face_detector = dlib::get_frontal_face_detector();
+
+	// The landmark detector is implemented in the shape_predictor class
+	dlib::shape_predictor landmark_detector;
+
+	// Load the landmark model
+	dlib::deserialize(util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat") >> landmark_detector;
+
+	std::string s1;
+	std::string s2;
+
+	std::cout << "Enter Face Image 1: ";
+	std::cin >> s1;
+	std::cout << "Enter Face Image 2: ";
+	std::cin >> s2;
+
+	//Read two images
+	cv::Mat img1 = cv::imread(util::get_data_path() + "images/people/" + s1);
+	cv::Mat img2 = cv::imread(util::get_data_path() + "images/people/" + s2);
+
+	std::vector<cv::Point2f> points1;
+	std::vector<cv::Point2f> points2;
+
+	// Detect landmarks in both images.
+	if (landmark_file_found(s1))
+	{
+		points1 = get_saved_points(util::get_data_path() + "images/people" +  remove_extension(s1) + ".txt");
+	}
+	else
+	{
+		points1 = get_landmarks(face_detector, landmark_detector, img1);
+	}
+
+	if (landmark_file_found(s2))
+	{
+		 points2 = get_saved_points(util::get_data_path() + "images/people/" + remove_extension(s2) + ".txt");
+	}
+	else
+	{
+		points2 = get_landmarks(face_detector, landmark_detector, img2);
+	}
+
+	// Convert image to floating point in the range 0 to 1
+	img1.convertTo(img1, CV_32FC3, 1 / 255.0);
+	img2.convertTo(img2, CV_32FC3, 1 / 255.0);
+	// Dimensions of output image
+	cv::Size size(600, 600);
+
+	// Variables for storing normalized images.
+	cv::Mat img_norm1;
+	cv::Mat img_norm2;
+
+	// Normalize image to output coordinates.
+	normalize_images_and_landmarks(size, img1, img_norm1, points1, points1);
+	normalize_images_and_landmarks(size, img2, img_norm2, points2, points2);
+
+	// Calculate average points. Will be used for Delaunay triangulation.
+	std::vector<cv::Point2f> points_avg;
+
+	for (int i = 0; i < points1.size(); i++)
+	{
+		points_avg.push_back((points1[i] + points2[i]) / 2);
+	}
+
+	// 8 Boundary points for Delaunay Triangulation
+	std::vector<cv::Point2f> boundary_pts;
+	get_eight_boundary_points(size, boundary_pts);
+
+	for (int i = 0; i < boundary_pts.size(); i++)
+	{
+		points_avg.push_back(boundary_pts[i]);
+		points1.push_back(boundary_pts[i]);
+		points2.push_back(boundary_pts[i]);
+	}
+
+	// Calculate Delaunay triangulation.
+	std::vector<std::vector<int>> delaunay_tri;
+	calculate_delaunay_triangles(cv::Rect(0, 0, size.width, size.height), points_avg, delaunay_tri);
+
+	// Start animation.
+	double alpha = 0;
+	bool increase_alpha = true;
+	int display_count = 1;
+
+	cv::imshow("Image 1", img1);
+	cv::imshow("Image 2", img2);
+	cv::waitKey(2500);
+
+	while (true)
+	{
+		// Compute landmark points based on morphing parameter alpha
+		std::vector<cv::Point2f> points;
+		for (int i = 0; i < points1.size(); i++)
+		{
+			cv::Point2f point_morph = (1 - alpha) * points1[i] + alpha * points2[i];
+			points.push_back(point_morph);
+		}
+
+		// Warp images such that normalized points line up with morphed points.
+		cv::Mat img_out1;
+		cv::Mat img_out2;
+		warp_image(img_norm1, img_out1, points1, points, delaunay_tri);
+		warp_image(img_norm2, img_out2, points2, points, delaunay_tri);
+
+		// Blend warped images based on morphing parameter alpha
+		cv::Mat img_morph = (1 - alpha) * img_out1 + alpha * img_out2;
+
+		// Keep animating by ensuring alpha stays between 0 and 1.
+		if (alpha <= 0 && !increase_alpha)
+		{
+			increase_alpha = true;
+		}
+
+		if (alpha >= 1 && increase_alpha)
+		{
+			increase_alpha = false;
+			break;
+		}
+
+		if (increase_alpha)
+		{
+			alpha += 0.075;
+		}
+		else
+		{
+			alpha -= 0.075;
+		}
+
+		// First subplot
+		cv::imshow("Morph", img_morph);
+		cv::waitKey(5000);
+		display_count++;
+	}
 }

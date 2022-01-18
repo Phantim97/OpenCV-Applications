@@ -1,7 +1,7 @@
-#include "face_averaging.h"
+#include "face_apps.h"
 
 int main()
 {
-	face_averaging_main();
+	face_morph_main();
 	return 0;
 }
