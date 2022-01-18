@@ -204,6 +204,17 @@ static std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_
 	return points;
 }
 
+static void list_files_in_directory(const std::string& dir_name)
+{
+	std::vector<std::string> files;
+	read_file_names(dir_name, files);
+
+	for (int i = 0; i < files.size(); i++)
+	{
+		std::cout << files[i] << '\n';
+	}
+}
+
 void face_averaging_main()
 {
 	// Get the face detector
