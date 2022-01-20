@@ -4,7 +4,7 @@
 #include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
 #include <dlib/opencv/cv_image.h>
-
+#include <dlib/gui_widgets.h>
 #include "triangle_warp.h"
 #include "env_util.h"
 #include "delaunay.h"
@@ -610,4 +610,263 @@ void bug_eyes()
 	src(roi_eye_right).copyTo(eye_region);
 	eye_region = barrel(eye_region, bulge_amount);
 	eye_region.copyTo(output(roi_eye_right));
+
+	cv::imshow("Output", output);
+	cv::waitKey(5000);
+}
+
+//Pose estimation
+#define FACE_DOWNSAMPLE_RATIO 2
+#define SKIP_FRAMES 10
+#define OPENCV_FACE_RENDER
+
+// 3D Model Points of selected landmarks in an arbitrary frame of reference
+std::vector<cv::Point3d> get3d_model_points()
+{
+	std::vector<cv::Point3d> model_points;
+
+	model_points.emplace_back(0.0f, 0.0f, 0.0f); //The first must be (0,0,0) while using POSIT
+	model_points.emplace_back(0.0f, -330.0f, -65.0f);
+	model_points.emplace_back(-225.0f, 170.0f, -135.0f);
+	model_points.emplace_back(225.0f, 170.0f, -135.0f);
+	model_points.emplace_back(-150.0f, -150.0f, -125.0f);
+	model_points.emplace_back(150.0f, -150.0f, -125.0f);
+
+	return model_points;
+}
+
+// 2D landmark points from all landmarks
+std::vector<cv::Point2d> get2d_image_points(dlib::full_object_detection& d)
+{
+	std::vector<cv::Point2d> image_points;
+	image_points.emplace_back(d.part(30).x(), d.part(30).y());    // Nose tip
+	image_points.emplace_back(d.part(8).x(), d.part(8).y());      // Chin
+	image_points.emplace_back(d.part(36).x(), d.part(36).y());    // Left eye left corner
+	image_points.emplace_back(d.part(45).x(), d.part(45).y());    // Right eye right corner
+	image_points.emplace_back(d.part(48).x(), d.part(48).y());    // Left Mouth corner
+	image_points.emplace_back(d.part(54).x(), d.part(54).y());    // Right mouth corner
+	return image_points;
+}
+
+// Camera Matrix from focal length and focal center
+cv::Mat get_camera_matrix(const float focal_length, const cv::Point2d& center)
+{
+	cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+	return camera_matrix;
+}
+
+#include <dlib/image_processing/frontal_face_detector.h>
+#include <opencv2/opencv.hpp>
+
+
+// Draw an open or closed polygon between
+// start and end indices of full_object_detection
+void draw_polyline(cv::Mat& img, const dlib::full_object_detection& landmarks, const int start, const int end, const bool is_closed = false)
+{
+	std::vector <cv::Point> points;
+	for (int i = start; i <= end; ++i)
+	{
+		points.emplace_back(landmarks.part(i).x(), landmarks.part(i).y());
+	}
+
+	cv::polylines(img, points, is_closed, cv::Scalar(255, 200, 0), 2, 16);
+}
+
+// Draw face for the 68-point model.
+void render_face(cv::Mat& img, const dlib::full_object_detection& landmarks)
+{
+	draw_polyline(img, landmarks, 0, 16);           // Jaw line
+	draw_polyline(img, landmarks, 17, 21);          // Left eyebrow
+	draw_polyline(img, landmarks, 22, 26);          // Right eyebrow
+	draw_polyline(img, landmarks, 27, 30);          // Nose bridge
+	draw_polyline(img, landmarks, 30, 35, true);    // Lower nose
+	draw_polyline(img, landmarks, 36, 41, true);    // Left eye
+	draw_polyline(img, landmarks, 42, 47, true);    // Right Eye
+	draw_polyline(img, landmarks, 48, 59, true);    // Outer lip
+	draw_polyline(img, landmarks, 60, 67, true);    // Inner lip
+
+}
+
+// Draw points on an image.
+// Works for any number of points.
+void render_face
+(
+	cv::Mat& img, // Image to draw the points on
+	const std::vector<cv::Point2f>& points, // Vector of points
+	const cv::Scalar& color, // color points
+	const int radius = 3) // Radius of points.
+{
+
+	for (int i = 0; i < points.size(); i++)
+	{
+		cv::circle(img, points[i], radius, color, -1);
+	}
+
+}
+
+void pose_estimation_main()
+{
+	try
+	{
+		// Create a VideoCapture object
+		cv::VideoCapture cap(0);
+		// Check if OpenCV is able to read feed from camera
+		if (!cap.isOpened())
+		{
+			std::cerr << "Unable to connect to camera\n";
+			return;
+		}
+
+		// Just a place holder. Actual value calculated after 100 frames.
+		double fps = 30.0;
+		cv::Mat im;
+
+		// Get first frame and allocate memory.
+		cap >> im;
+		cv::Mat im_small;
+		cv::Mat im_display;
+
+		// Resize image to reduce computations
+		cv::resize(im, im_small, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+		cv::resize(im, im_display, cv::Size(), 0.5, 0.5);
+
+		cv::Size size = im.size();
+
+		// Load face detection and pose estimation models.
+		dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+		dlib::shape_predictor predictor;
+		dlib::deserialize("../../common/shape_predictor_68_face_landmarks.dat") >> predictor;
+
+		// initiate the tickCounter
+		int count = 0;
+		double t = cv::getTickCount();
+
+		// variable to store face rectangles
+		std::vector<dlib::rectangle> faces;
+
+		// Grab and process frames until the main window is closed by the user.
+		while (true)
+		{
+
+			// start tick counter if count is zero
+			if (count == 0)
+			{
+				t = cv::getTickCount();
+			}
+
+			// Grab a frame
+			cap >> im;
+
+			// Create imSmall by resizing image for face detection
+			cv::resize(im, im_small, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+
+			// Change to dlib's image format. No memory is copied.
+			dlib::cv_image<dlib::bgr_pixel> cimg_small(im_small);
+			dlib::cv_image<dlib::bgr_pixel> cimg(im);
+
+			// Process frames at an interval of SKIP_FRAMES.
+			// This value should be set depending on your system hardware
+			// and camera fps.
+			// To reduce computations, this value should be increased
+			if (count % SKIP_FRAMES == 0)
+			{
+				// Detect faces
+				faces = detector(cimg_small);
+			}
+
+			// Pose estimation
+			std::vector<cv::Point3d> model_points = get3d_model_points();
+
+			// Iterate over faces
+			std::vector<dlib::full_object_detection> shapes;
+			for (unsigned long i = 0; i < faces.size(); ++i)
+			{
+				// Since we ran face detection on a resized image,
+				// we will scale up coordinates of face rectangle
+				dlib::rectangle r(
+					(long)(faces[i].left() * FACE_DOWNSAMPLE_RATIO),
+					(long)(faces[i].top() * FACE_DOWNSAMPLE_RATIO),
+					(long)(faces[i].right() * FACE_DOWNSAMPLE_RATIO),
+					(long)(faces[i].bottom() * FACE_DOWNSAMPLE_RATIO)
+				);
+
+				// Find face landmarks by providing reactangle for each face
+				dlib::full_object_detection shape = predictor(cimg, r);
+				shapes.push_back(shape);
+
+				// Draw landmarks over face
+				render_face(im, shape);
+
+				// get 2D landmarks from Dlib's shape object
+				std::vector<cv::Point2d> image_points = get2d_image_points(shape);
+
+				// Camera parameters
+				double focal_length = im.cols;
+				cv::Mat camera_matrix = get_camera_matrix(focal_length, cv::Point2d(im.cols / 2, im.rows / 2));
+
+				// Assume no lens distortion
+				cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+
+				// calculate rotation and translation vector using solvePnP
+				cv::Mat rotation_vector;
+				cv::Mat translation_vector;
+				cv::solvePnP(model_points, image_points, camera_matrix, dist_coeffs, rotation_vector, translation_vector);
+
+				// Project a 3D point (0, 0, 1000.0) onto the image plane.
+				// We use this to draw a line sticking out of the nose
+				std::vector<cv::Point3d> nose_end_point_3d;
+				std::vector<cv::Point2d> nose_end_point_2d;
+				nose_end_point_3d.emplace_back(0, 0, 1000.0);
+				cv::projectPoints(nose_end_point_3d, rotation_vector, translation_vector, camera_matrix, dist_coeffs, nose_end_point_2d);
+
+				// draw line between nose points in image and 3D nose points
+				// projected to image plane
+				cv::line(im, image_points[0], nose_end_point_2d[0], cv::Scalar(255, 0, 0), 2);
+
+			}
+
+			// Print actual FPS
+			cv::putText(im, cv::format("fps %.2f", fps), cv::Point(50, size.height - 50), cv::FONT_HERSHEY_COMPLEX, 1.5, cv::Scalar(0, 0, 255), 3);
+
+			// Display it all on the screen
+
+			// Resize image for display
+			im_display = im;
+			cv::resize(im, im_display, cv::Size(), 0.5, 0.5);
+			cv::imshow("webcam Head Pose", im_display);
+
+			// WaitKey slows down the runtime quite a lot
+			// So check every 15 frames
+			if (count % 15 == 0)
+			{
+				int k = cv::waitKey(1);
+				// Quit if 'q' or ESC is pressed
+				if (k == 'q' || k == 27)
+				{
+					break;
+				}
+			}
+
+			// Calculate actual fps
+			// increment frame counter
+			count++;
+			// calculate fps at an interval of 100 frames
+			if (count == 100)
+			{
+				t = (static_cast<double>(cv::getTickCount()) - t) / cv::getTickFrequency();
+				fps = 100.0 / t;
+				count = 0;
+			}
+		}
+	}
+	catch (dlib::serialization_error& e)
+	{
+		std::cout << "Shape predictor model file not found\n";
+		std::cout << "Put shape_predictor_68_face_landmarks in models directory\n";
+		std::cout << '\n' << e.what() << '\n';
+	}
+	catch (std::exception& e)
+	{
+		std::cout << e.what() << '\n';
+	}
 }
