@@ -507,3 +507,107 @@ void face_morph_main()
 		display_count++;
 	}
 }
+
+//eyes mod portion
+cv::Mat barrel(const cv::Mat& src, const float k)
+{
+	const int w = src.cols;
+	const int h = src.rows;
+
+	// Meshgrid of destiation image
+	cv::Mat xd = cv::Mat::zeros(src.size(), CV_32F);
+	cv::Mat yd = cv::Mat::zeros(src.size(), CV_32F);
+
+	for (int y = 0; y < h; y++)
+	{
+		for (int x = 0; x < w; x++)
+		{
+			// Normalize x and y
+			const float xu = (static_cast<float>(x) / w) - 0.5;
+			const float yu = (static_cast<float>(y) / h) - 0.5;
+
+			// Radial distance from center
+			const float r = sqrt(xu * xu + yu * yu);
+
+			// Implementing the following equation
+			// dr = k * r * cos(pi*r)
+			float dr = k * r * cos(M_PI * r);
+
+			// Outside the maximum radius dr is set to 0
+			if (r > 0.5)
+			{
+				dr = 0;
+			}
+
+			// Remember we need to provide inverse mapping to remap
+			// Hence the negative sign before dr
+			const float rn = r - dr;
+
+			// Applying the distortion on the grid
+			// Back to un-normalized coordinates  
+			xd.at<float>(y, x) = w * (rn * xu / r + 0.5);
+			yd.at<float>(y, x) = h * (rn * yu / r + 0.5);
+
+		}
+	}
+
+	// Interpolation of points
+	cv::Mat dst;
+	cv::remap(src, dst, xd, yd, cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+	return dst;
+}
+
+
+void bug_eyes()
+{
+	std::string model_path = util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat";
+	dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+	dlib::shape_predictor pose_model;
+	dlib::deserialize(model_path) >> pose_model;
+	int radius = 30;
+	float bulge_amount = 0.5;
+
+	std::string filename = util::get_data_path() + "images/tim.jpg";
+	cv::Mat src = cv::imread(filename);
+	dlib::cv_image<dlib::bgr_pixel> cimg(src);
+	std::vector<dlib::rectangle> faces;
+
+	faces = detector(cimg);
+
+	// Find the pose of each face.
+	dlib::full_object_detection landmarks;
+
+	// Find the landmark points using DLIB Facial landmarks detector
+	landmarks = pose_model(cimg, faces[0]);
+	//std::vector<cv::Point2f> landmark_pts = get_saved_points(util::get_data_path() + "images/tim.txt");
+
+	// Find the roi for left and right Eye
+	cv::Rect roi_eye_right ( (landmarks.part(43).x()-radius)
+	                       , (landmarks.part(43).y()-radius)
+	                       , ( landmarks.part(46).x() - landmarks.part(43).x() + 2*radius )
+	                       , ( landmarks.part(47).y() - landmarks.part(43).y() + 2*radius ) );
+	cv::Rect roi_eye_left ( (landmarks.part(37).x()-radius)
+	                      , (landmarks.part(37).y()-radius)
+	                      , ( landmarks.part(40).x() - landmarks.part(37).x() + 2*radius )
+	                      , ( landmarks.part(41).y() - landmarks.part(37).y() + 2*radius ) );
+	/*cv::Rect roiEyeRight((landmark_pts[43].x - radius)
+	                     , (landmark_pts[43].y - radius)
+	                     , (landmark_pts[46].x - landmark_pts[43].x + 2 * radius)
+	                     , (landmark_pts[47].y - landmark_pts[43].y + 2 * radius));
+	cv::Rect roiEyeLeft((landmark_pts[37].x - radius)
+	                    , (landmark_pts[37].y - radius)
+	                    , (landmark_pts[40].x - landmark_pts[37].x + 2 * radius)
+	                    , (landmark_pts[41].y - landmark_pts[37].y + 2 * radius));*/
+	// Find the patch and apply the transformation
+	cv::Mat eye_region;
+	cv::Mat output;
+	output = src.clone();
+
+	bulge_amount = 0.5;
+	src(roi_eye_left).copyTo(eye_region);
+	eye_region = barrel(eye_region, bulge_amount);
+	eye_region.copyTo(output(roi_eye_left));
+	src(roi_eye_right).copyTo(eye_region);
+	eye_region = barrel(eye_region, bulge_amount);
+	eye_region.copyTo(output(roi_eye_right));
+}
