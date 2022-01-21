@@ -655,10 +655,6 @@ cv::Mat get_camera_matrix(const float focal_length, const cv::Point2d& center)
 	return camera_matrix;
 }
 
-#include <dlib/image_processing/frontal_face_detector.h>
-#include <opencv2/opencv.hpp>
-
-
 // Draw an open or closed polygon between
 // start and end indices of full_object_detection
 void draw_polyline(cv::Mat& img, const dlib::full_object_detection& landmarks, const int start, const int end, const bool is_closed = false)
@@ -704,7 +700,7 @@ void render_face
 
 }
 
-void pose_estimation_main()
+void head_pose_estimation_main()
 {
 	try
 	{
