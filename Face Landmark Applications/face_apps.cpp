@@ -735,7 +735,7 @@ void pose_estimation_main()
 		// Load face detection and pose estimation models.
 		dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
 		dlib::shape_predictor predictor;
-		dlib::deserialize("../../common/shape_predictor_68_face_landmarks.dat") >> predictor;
+		dlib::deserialize(util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat") >> predictor;
 
 		// initiate the tickCounter
 		int count = 0;
@@ -822,7 +822,6 @@ void pose_estimation_main()
 				// draw line between nose points in image and 3D nose points
 				// projected to image plane
 				cv::line(im, image_points[0], nose_end_point_2d[0], cv::Scalar(255, 0, 0), 2);
-
 			}
 
 			// Print actual FPS
