@@ -7,5 +7,6 @@ elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 	set(OpenCV_DIR $ENV{LIBS_PATH}/opencv-master/out/install/x64-Debug)
 endif()
 
+add_subdirectory("Utility")
 add_subdirectory("Face Landmark Detection")
 add_subdirectory("Face Landmark Applications")

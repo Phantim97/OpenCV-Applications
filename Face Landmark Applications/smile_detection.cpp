@@ -22,16 +22,14 @@ bool smile_detector(const dlib::cv_image<dlib::bgr_pixel>& cimg, const dlib::rec
         RIGHT_LIP = 55,
     };
 
-    //55 - 49
+    constexpr double smile_threshold = 0.302;
+
     const double lip_width = landmarks.part(RIGHT_LIP).x() - landmarks.part(LEFT_LIP).x();
-    //15 - 3
     const double jaw_width = landmarks.part(RIGHT_JAW).x() - landmarks.part(LEFT_JAW).x();
 
     const double ratio = lip_width / jaw_width;
 
-    const bool is_smiling = ratio > 0.302;
-
-    return is_smiling;
+    return ratio > smile_threshold;
 }
 
 void smile_detection()
