@@ -13,6 +13,7 @@ set(DLIB_DIR $ENV{LIBS_PATH}/dlib/build/dlib)
 find_package(DLIB REQUIRED) 
 include_directories(${DLIB_INCLUDE_DIRECTORY})
 include_directories(${OpenCV_LIB_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/Utility)
 
 # Add source to this project's executable.
 add_executable(FaceDetect "main.cpp" "face_detect_dlib_.h" "face_detect_dlib.cpp" "face_alignment.h" "face_alignment.cpp" "custom_detector.cpp" "custom_detector.h")

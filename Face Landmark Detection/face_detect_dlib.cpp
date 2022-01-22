@@ -87,11 +87,11 @@ void dlib_detect_main()
     dlib::deserialize(predictor_path) >> landmark_detector;
     
     // Read Image
-    std::string image_filename(data_path + "images/family.jpg");
+    std::string image_filename(data_path + "images/people/gillian.jpg");
     cv::Mat img = cv::imread(image_filename);
 
     // landmarks will be stored in results/family_0.txt
-    std::string landmarks_basename("results/family");
+    std::string landmarks_basename("results/people");
 
     // Convert OpenCV image format to Dlib's image format
     dlib::cv_image<dlib::bgr_pixel> dlib_img(img);
@@ -131,7 +131,7 @@ void dlib_detect_main()
     }
 
     // Save image
-    std::string output_filename("results/familyLandmarks.jpg");
+    std::string output_filename("results/Gillian.jpg");
     std::cout << "Saving output image to " << output_filename << '\n';
     cv::imwrite(output_filename, img);
     cv::imshow("Image", img);

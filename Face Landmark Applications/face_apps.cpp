@@ -109,7 +109,7 @@ static void warp_image(cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::
 	}
 }
 
-static void read_file_names(const std::string& string, std::vector<std::string>& file_vector)
+void read_file_names(const std::string& string, std::vector<std::string>& file_vector)
 {
 	//Get all filenames in directory
 	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(string))
@@ -202,17 +202,6 @@ static std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_
 	}
 
 	return points;
-}
-
-static void list_files_in_directory(const std::string& dir_name)
-{
-	std::vector<std::string> files;
-	read_file_names(dir_name, files);
-
-	for (int i = 0; i < files.size(); i++)
-	{
-		std::cout << files[i] << '\n';
-	}
 }
 
 void face_averaging_main()
@@ -556,7 +545,6 @@ cv::Mat barrel(const cv::Mat& src, const float k)
 	cv::remap(src, dst, xd, yd, cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 	return dst;
 }
-
 
 void bug_eyes()
 {

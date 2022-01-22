@@ -3,8 +3,9 @@
 
 int main()
 {
+	dlib_detect_main();
 	//dlib_fast_face_detect();
 	//landmark_stabilization();
-	custom_detector_main();
+	//custom_detector_main();
 	return 0;
 }
