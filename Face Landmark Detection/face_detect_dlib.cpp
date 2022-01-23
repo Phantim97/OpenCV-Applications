@@ -21,8 +21,8 @@ void write_landmarks_to_file(dlib::full_object_detection& landmarks, const std::
     {
         // Print x and y coordinates to file
         ofs << landmarks.part(i).x() << " " << landmarks.part(i).y() << '\n';
-
     }
+
     // Close file
     ofs.close();
 }

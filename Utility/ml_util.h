@@ -26,3 +26,6 @@ enum class MlsMode
 };
 
 void mls_warp_image(cv::Mat& src, std::vector<cv::Point2f>& spts, cv::Mat& dst, std::vector<cv::Point2f>& dpts, MlsMode mode);
+
+//Assumes using people directory
+void face_landmark_writer(const cv::Mat& src, const std::string& res_file);
