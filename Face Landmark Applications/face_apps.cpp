@@ -170,12 +170,12 @@ static void landmarks_to_points(dlib::full_object_detection& landmarks, std::vec
 	}
 }
 
-static std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& landmark_detector, const cv::Mat& img, const float FACE_DOWNSAMPLE_RATIO = 1)
+static std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& landmark_detector, const cv::Mat& img, const float face_downsample_ratio = 1)
 {
 	std::vector<cv::Point2f> points;
 
 	cv::Mat img_small;
-	cv::resize(img, img_small, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+	cv::resize(img, img_small, cv::Size(), 1.0 / face_downsample_ratio, 1.0 / face_downsample_ratio);
 
 	// Convert OpenCV image format to Dlib's image format
 	const dlib::cv_image<dlib::bgr_pixel> dlib_im(img);
@@ -191,10 +191,10 @@ static std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_
 
 		const dlib::rectangle scaled_rect
 		(
-			rect.left() * FACE_DOWNSAMPLE_RATIO,
-			rect.top() * FACE_DOWNSAMPLE_RATIO,
-			rect.right() * FACE_DOWNSAMPLE_RATIO,
-			rect.bottom() * FACE_DOWNSAMPLE_RATIO
+			rect.left() * face_downsample_ratio,
+			rect.top() * face_downsample_ratio,
+			rect.right() * face_downsample_ratio,
+			rect.bottom() * face_downsample_ratio
 		);
 
 		dlib::full_object_detection landmarks = landmark_detector(dlib_im, scaled_rect);

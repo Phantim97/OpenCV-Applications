@@ -119,46 +119,6 @@ void face_swap_main()
 #define FACE_DOWNSAMPLE_RATIO 1.5
 #define SKIP_FRAMES 2
 
-static cv::Mat correct_colors(const cv::Mat& im1, cv::Mat im2, std::vector<cv::Point2f> points2)// lower number --> output is closer to webcam and vice-versa
-{
-	const cv::Point2f dist_between_eyes = points2[38] - points2[43];
-	const float distance = cv::norm(dist_between_eyes);
-
-    //using heuristics to calculate the amount of blur
-    int blur_amount = static_cast<int>(0.5 * distance);
-
-    if (blur_amount % 2 == 0)
-    {
-        blur_amount += 1;
-    }
-
-    cv::Mat im1_blur = im1.clone();
-    cv::Mat im2_blur = im2.clone();
-
-    cv::blur(im1_blur, im1_blur, cv::Size(blur_amount, blur_amount));
-    cv::blur(im2_blur, im2_blur, cv::Size(blur_amount, blur_amount));
-    // Avoid divide-by-zero errors.
-
-    im2_blur += 2 * (im2_blur <= 1) / 255;
-    im1_blur.convertTo(im1_blur, CV_32F);
-    im2_blur.convertTo(im2_blur, CV_32F);
-    im2.convertTo(im2, CV_32F);
-
-    cv::Mat ret = im2.clone();
-    ret = im2.mul(im1_blur).mul(1 / im2_blur);
-    cv::threshold(ret, ret, 255, 255, cv::THRESH_TRUNC);
-    ret.convertTo(ret, CV_8UC3);
-
-    return ret;
-}
-
-// Constrains points to be inside boundary
-static void constrain_point(cv::Point2f& p, const cv::Size& sz)
-{
-    p.x = std::min(std::max(static_cast<double>(p.x), 0.0), static_cast<double>(sz.width - 1));
-    p.y = std::min(std::max(static_cast<double>(p.y), 0.0), static_cast<double>(sz.height - 1));
-}
-
 static bool get_output_option()
 {
     std::string opt;

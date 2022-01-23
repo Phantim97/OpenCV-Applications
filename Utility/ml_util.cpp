@@ -1,3 +1,5 @@
+#include "ml_util.h"
+
 #include <fstream>
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing/full_object_detection.h>
@@ -136,12 +138,12 @@ static bool rect_area_comparator(const dlib::rectangle& r1, const dlib::rectangl
     return r1.area() < r2.area();
 }
 
-std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& landmark_detector, const cv::Mat& img, const float FACE_DOWNSAMPLE_RATIO = 1)
+std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_detector, const dlib::shape_predictor& landmark_detector, const cv::Mat& img, const float face_downsample_ratio = 1)
 {
     std::vector<cv::Point2f> points;
 
     cv::Mat img_small;
-    cv::resize(img, img_small, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+    cv::resize(img, img_small, cv::Size(), 1.0 / face_downsample_ratio, 1.0 / face_downsample_ratio);
 
     // Convert OpenCV image format to Dlib's image format
     const dlib::cv_image<dlib::bgr_pixel> dlib_im(img);
@@ -157,10 +159,10 @@ std::vector<cv::Point2f> get_landmarks(dlib::frontal_face_detector& face_detecto
 
         const dlib::rectangle scaled_rect
         (
-            rect.left() * FACE_DOWNSAMPLE_RATIO,
-            rect.top() * FACE_DOWNSAMPLE_RATIO,
-            rect.right() * FACE_DOWNSAMPLE_RATIO,
-            rect.bottom() * FACE_DOWNSAMPLE_RATIO
+            rect.left() * face_downsample_ratio,
+            rect.top() * face_downsample_ratio,
+            rect.right() * face_downsample_ratio,
+            rect.bottom() * face_downsample_ratio
         );
 
         dlib::full_object_detection landmarks = landmark_detector(dlib_im, scaled_rect);
@@ -230,5 +232,314 @@ std::vector<cv::Point2f> get_landmark_point_vector(const cv::Mat& img, const std
     else
     {
         return get_landmarks(fd, pd, img);
+    }
+}
+
+// Constrains points to be inside boundary
+void constrain_point(cv::Point2f& p, const cv::Size& sz)
+{
+    p.x = std::min(std::max(static_cast<double>(p.x), 0.0), static_cast<double>(sz.width - 1));
+    p.y = std::min(std::max(static_cast<double>(p.y), 0.0), static_cast<double>(sz.height - 1));
+}
+
+void warp_image(cv::Mat& img_in, cv::Mat& img_out, const std::vector<cv::Point2f>& points_in, const std::vector<cv::Point2f>& points_out, const std::vector<std::vector<int>>& delaunay_tri)
+{
+    // Specify the output image the same size and type as the input image.
+    const cv::Size size = img_in.size();
+    img_out = cv::Mat::zeros(size, img_in.type());
+
+    // Warp each input triangle to output triangle.
+    // The triangulation is specified by delaunayTri
+    for (size_t j = 0; j < delaunay_tri.size(); j++)
+    {
+        // Input and output points corresponding to jth triangle
+        std::vector<cv::Point2f> tin, tout;
+
+        for (int k = 0; k < 3; k++)
+        {
+            // Extract a vertex of input triangle
+            cv::Point2f p_in = points_in[delaunay_tri[j][k]];
+            // Make sure the vertex is inside the image.
+            constrain_point(p_in, size);
+
+            // Extract a vertex of the output triangle
+            cv::Point2f p_out = points_out[delaunay_tri[j][k]];
+            // Make sure the vertex is inside the image.
+            constrain_point(p_out, size);
+
+            // Push the input vertex into input triangle
+            tin.push_back(p_in);
+            // Push the output vertex into output triangle
+            tout.push_back(p_out);
+        }
+
+        // Warp pixels inside input triangle to output triangle.  
+        warp_triangle(img_in, img_out, tin, tout);
+    }
+}
+
+void get_eight_boundary_points(const cv::Size& size, std::vector<cv::Point2f>& boundary_pts)
+{
+    const int h = size.height;
+    const int w = size.width;
+
+    boundary_pts.emplace_back(0, 0);
+    boundary_pts.emplace_back(w / 2, 0);
+    boundary_pts.emplace_back(w - 1, 0);
+    boundary_pts.emplace_back(w - 1, h / 2);
+    boundary_pts.emplace_back(w - 1, h - 1);
+    boundary_pts.emplace_back(w / 2, h - 1);
+    boundary_pts.emplace_back(0, h - 1);
+    boundary_pts.emplace_back(0, h / 2);
+}
+
+cv::Mat correct_colors(const cv::Mat& im1, cv::Mat im2, const std::vector<cv::Point2f>& points2)// lower number --> output is closer to webcam and vice-versa
+{
+    const cv::Point2f dist_between_eyes = points2[38] - points2[43];
+    const float distance = cv::norm(dist_between_eyes);
+
+    //using heuristics to calculate the amount of blur
+    int blur_amount = static_cast<int>(0.5 * distance);
+
+    if (blur_amount % 2 == 0)
+    {
+        blur_amount += 1;
+    }
+
+    cv::Mat im1_blur = im1.clone();
+    cv::Mat im2_blur = im2.clone();
+
+    cv::blur(im1_blur, im1_blur, cv::Size(blur_amount, blur_amount));
+    cv::blur(im2_blur, im2_blur, cv::Size(blur_amount, blur_amount));
+    // Avoid divide-by-zero errors.
+
+    im2_blur += 2 * (im2_blur <= 1) / 255;
+    im1_blur.convertTo(im1_blur, CV_32F);
+    im2_blur.convertTo(im2_blur, CV_32F);
+    im2.convertTo(im2, CV_32F);
+
+    cv::Mat ret = im2.clone();
+    ret = im2.mul(im1_blur).mul(1 / im2_blur);
+    cv::threshold(ret, ret, 255, 255, cv::THRESH_TRUNC);
+    ret.convertTo(ret, CV_8UC3);
+
+    return ret;
+}
+
+#define GRID 30
+#define	IMG_MAX_X	3000
+#define	IMG_MAX_Y	2000
+#define MAXPOINT	100
+
+// Flag for Map Computation
+static MlsMode calc_map = MlsMode::FAST;
+// Map points for Projection used in MLSWarpImage
+static cv::Point2f ptmap[IMG_MAX_Y / GRID + 1][IMG_MAX_X / GRID + 1];
+
+int mls_projection_single(std::vector<cv::Point2f>& src, std::vector<cv::Point2f>& dst, int x, int y, float& tx, float& ty)
+{
+    float w[MAXPOINT];	// Weights
+    float wsum = 0.0;
+
+    //Centroids
+    cv::Point2f p_star;
+    cv::Point2f q_star;
+    cv::Point2f p_hat[MAXPOINT];
+    cv::Point2f q_hat[MAXPOINT];
+
+    // Transform Matrix
+    cv::Mat a[MAXPOINT];
+
+    // Intermediate matrices for computation
+    cv::Mat p(2, 2, CV_32F, 0.0);
+    cv::Mat v(2, 2, CV_32F, 0.0);
+    cv::Mat vt(2, 2, CV_32F, 0.0);
+    cv::Mat q(1, 2, CV_32F, 0.0);
+
+    // calc weights
+    for (int i = 0; i < src.size(); i++)
+    {
+        w[i] = 1.0 / (pow(x - src[i].x + 0.5, 2) + pow(y - src[i].y + 0.5, 2));
+        wsum += w[i];
+    }
+
+    // calculate centroids of p,q w.r.t W --> p* and q*
+    p_star.x = 0.0; p_star.y = 0.0;
+    q_star.x = 0.0; q_star.y = 0.0;
+
+    for (int j = 0; j < src.size(); j++)
+    {
+        p_star.x += (w[j] * src[j].x);
+        p_star.y += (w[j] * src[j].y);
+        q_star.x += (w[j] * dst[j].x);
+        q_star.y += (w[j] * dst[j].y);
+    }
+
+    q_star /= wsum;
+    p_star /= wsum;
+
+    // calc phat and qhat -- p^ and q^
+    for (int i = 0; i < src.size(); i++)
+    {
+        p_hat[i].x = src[i].x - p_star.x;
+        p_hat[i].y = src[i].y - p_star.y;
+        q_hat[i].x = dst[i].x - q_star.x;
+        q_hat[i].y = dst[i].y - q_star.y;
+    }
+
+    // calc Ai
+    for (int i = 0; i < src.size(); i++)
+    {
+        p.at<float>(0, 0) = p_hat[i].x;
+        p.at<float>(0, 1) = p_hat[i].y;
+        p.at<float>(1, 0) = p_hat[i].y;
+        p.at<float>(1, 1) = -p_hat[i].x;
+
+        v.at<float>(0, 0) = x - p_star.x;
+        v.at<float>(0, 1) = y - p_star.y;
+        v.at<float>(1, 0) = y - p_star.y;
+        v.at<float>(1, 1) = -(x - p_star.x);
+
+        cv::transpose(v, vt);
+
+        a[i] = w[i] * p * vt;
+    }
+
+    cv::Mat fr(1, 2, CV_32F, 0.0);
+    cv::Mat temp_fr(1, 2, CV_32F, 0.0);
+
+    float len_fr;
+    float dist;
+
+    // Calc Fr and |Fr|
+    for (int i = 0; i < src.size(); i++)
+    {
+        q.at<float>(0, 0) = q_hat[i].x;
+        q.at<float>(0, 1) = q_hat[i].y;
+
+        temp_fr = q * a[i];
+
+        fr += temp_fr;
+    }
+
+    len_fr = sqrt(powf(fr.at<float>(0, 0), 2) + powf(fr.at<float>(0, 1), 2));
+
+    fr /= len_fr;
+
+    // Calc |V - p*|
+    dist = sqrt((x - p_star.x) * (x - p_star.x) + (y - p_star.y) * (y - p_star.y));
+
+    tx = dist * fr.at<float>(0, 0) + q_star.x;
+    ty = dist * fr.at<float>(0, 1) + q_star.y;
+
+    return 1;
+}
+
+int calc_mls(std::vector<cv::Point2f>& src, std::vector<cv::Point2f>& dst, const int x_size, const int y_size)
+{
+    // Create Map for Projection
+    if (x_size > IMG_MAX_X || y_size > IMG_MAX_Y)
+    {
+        printf("x_size or y_size is larger than maximum size (%d,%d)/(%d,%d)\n", x_size, y_size, IMG_MAX_X, IMG_MAX_Y);
+        return 0;
+    }
+
+    float tx;
+    float ty;
+
+    // Project GRID Points
+    for (int y = 0; y < y_size / GRID + 2; y++) 
+    {
+        for (int x = 0; x < x_size / GRID + 2; x++) 
+        {
+            mls_projection_single(src, dst, x * GRID, y * GRID, tx, ty);
+            ptmap[y][x].x = tx;
+            ptmap[y][x].y = ty;
+        }
+    }
+
+    calc_map = MlsMode::SINGLE;
+
+    return 1;
+}
+
+int calc_mls(std::vector<cv::Point2f>& src, std::vector<cv::Point2f>& dst)
+{
+    return calc_mls(src, dst, IMG_MAX_X, IMG_MAX_Y);
+}
+
+//
+//  Fast estimate MLS Projection Point using Precomputed Map
+//  calcMLS() must be called before use.
+//
+int mls_projection_fast(const int x, const int y, float& tx, float& ty)
+{
+    if (calc_map == MlsMode::FAST)
+    {
+        printf("calcMLS() must be called before MLSProjectionFast()\n");
+        return 0;
+    }
+
+    //unit square
+    const cv::Point2f f00 = ptmap[y / GRID][x / GRID];
+    const cv::Point2f f01 = ptmap[y / GRID][x / GRID + 1];
+    const cv::Point2f f10 = ptmap[y / GRID + 1][x / GRID];
+    const cv::Point2f f11 = ptmap[y / GRID + 1][x / GRID + 1];
+
+    //bi-linear interpolation
+    const float dx = static_cast<float>(x - GRID * (x / GRID)) / static_cast<float>(GRID);
+    const float dy = static_cast<float>(y - GRID * (y / GRID)) / static_cast<float>(GRID);
+
+    tx = (f00.x * (1.0 - dy) + f10.x * dy) * (1.0 - dx) + (f01.x * (1.0 - dy) + f11.x * dy) * dx;
+    ty = (f00.y * (1.0 - dy) + f10.y * dy) * (1.0 - dx) + (f01.y * (1.0 - dy) + f11.y * dy) * dx;
+
+    return 1;
+}
+
+void mls_warp_image(cv::Mat& src, std::vector<cv::Point2f>& spts, cv::Mat& dst, std::vector<cv::Point2f>& dpts, const MlsMode mode)
+{
+	float tx;
+	float ty;
+
+	//Precompute Map for dpts --> spts
+    if (mode == MlsMode::FAST) 
+    {
+        calc_mls(dpts, spts, dst.cols, dst.rows);
+    }
+
+    // Warp Image using MLS + bi-linear interpolation
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if (mode == MlsMode::FAST)
+            {
+                mls_projection_fast(x, y, tx, ty);
+            }
+            else //Rarely used
+            {
+                mls_projection_single(dpts, spts, x, y, tx, ty);
+            }
+
+            if (tx < 0 || tx > src.cols - 1 || ty < 0 || ty > src.rows - 1)
+            {
+                //Out of bounds
+                dst.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
+            }
+            else
+            {
+	            const int xcoord = static_cast<int>(tx + 0.5);
+                const int ycoord = static_cast<int>(ty + 0.5);
+
+                if (xcoord > src.cols - 1 || xcoord < 0 || ycoord > src.rows - 1 || ycoord < 0)
+                {
+                    dst.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
+                }
+                else
+                {
+                    dst.at<cv::Vec3b>(y, x) = src.at<cv::Vec3b>(ycoord, xcoord);
+                }
+            }
+        }
     }
 }
