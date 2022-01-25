@@ -1,6 +1,8 @@
 #include "face_swapping.h"
 #include "ify_filters.h"
 #include "virtual_makeup.h"
+#include "ml_util.h"
+#include "env_util.h"
 
 int main()
 {

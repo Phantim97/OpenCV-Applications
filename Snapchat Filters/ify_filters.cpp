@@ -183,7 +183,7 @@ void desaturate_image(cv::Mat& im, const double scale_by)
 	cv::cvtColor(img_hsv, im, cv::COLOR_HSV2BGR);
 }
 
-void remove_polygon_from_mask(cv::Mat& mask, const std::vector<cv::Point2f>& points, const std::vector<int>& points_index)
+static void remove_polygon_from_mask(cv::Mat& mask, const std::vector<cv::Point2f>& points, const std::vector<int>& points_index)
 {
 	std::vector<cv::Point> hull_points;
 
@@ -213,7 +213,7 @@ void append_forehead_points(std::vector<cv::Point2f>& points)
 	}
 }
 
-cv::Mat get_face_mask(const cv::Size& size, const std::vector<cv::Point2f>& points)
+static cv::Mat get_face_mask(const cv::Size& size, const std::vector<cv::Point2f>& points)
 {
 	// Left eye polygon
 	static int left_eye[] = { 36, 37, 38, 39, 40, 41 };
@@ -336,29 +336,27 @@ void age_filter()
 void happify()
 {
 	// Get the face detector
-	dlib::frontal_face_detector faceDetector = dlib::get_frontal_face_detector();
+	dlib::frontal_face_detector face_detector = dlib::get_frontal_face_detector();
 
 	// The landmark detector is implemented in the shape_predictor class
-	dlib::shape_predictor landmarkDetector;
+	dlib::shape_predictor landmark_detector;
 
 	// Load the landmark model
-	dlib::deserialize(util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat") >> landmarkDetector;
+	dlib::deserialize(util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat") >> landmark_detector;
 
 	// Amount of deformation
-	float offset1 = 1.3;
-	float offset2 = 1.3;
 
 	// Points that should not move
-	int anchorPoints[] = { 8, 30 };
-	std::vector<int> anchorPointsArray(anchorPoints, anchorPoints + sizeof(anchorPoints) / sizeof(int));
+	int anchor_points[] = { 8, 30 };
+	std::vector<int> anchor_points_array(anchor_points, anchor_points + sizeof(anchor_points) / sizeof(int));
 
 	// Points that will be deformed for lips
-	int deformedPoints1[] = { 48, 57, 54 };
-	std::vector<int> deformedPoints1Array(deformedPoints1, deformedPoints1 + sizeof(deformedPoints1) / sizeof(int));
+	int deformed_points1[] = { 48, 57, 54 };
+	std::vector<int> deformed_points1_array(deformed_points1, deformed_points1 + sizeof(deformed_points1) / sizeof(int));
 
 	// Points that will be deformed for lips
-	int deformedPoints2[] = { 21, 22, 36, 45 };
-	std::vector<int> deformedPoints2Array(deformedPoints2, deformedPoints2 + sizeof(deformedPoints2) / sizeof(int));
+	int deformed_points2[] = { 21, 22, 36, 45 };
+	std::vector<int> deformed_points2_array(deformed_points2, deformed_points2 + sizeof(deformed_points2) / sizeof(int));
 
 	double t = (double)cv::getTickCount();
 
@@ -367,7 +365,7 @@ void happify()
 	cv::Mat src = cv::imread(filename);
 
 	std::vector<cv::Point2f> landmarks;
-	landmarks = get_landmark_point_vector(src, "images/people/", "tian2.jpg", faceDetector, landmarkDetector);
+	landmarks = get_landmark_point_vector(src, "images/people/", "tian2.jpg", face_detector, landmark_detector);
 
 	if (landmarks.empty())
 	{
@@ -381,35 +379,37 @@ void happify()
 	cv::Point2f center2(landmarks[28]);
 
 	// Variables for storing the original and deformed points
-	std::vector<cv::Point2f> srcPoints;
-	std::vector<cv::Point2f> dstPoints;
+	std::vector<cv::Point2f> src_points;
+	std::vector<cv::Point2f> dst_points;
 
 	// Adding the original and deformed points using the landmark points
-	for (int i = 0; i < anchorPointsArray.size(); i++)
+	for (int i = 0; i < anchor_points_array.size(); i++)
 	{
-		srcPoints.push_back(landmarks[anchorPointsArray[i]]);
-		dstPoints.push_back(landmarks[anchorPointsArray[i]]);
+		src_points.push_back(landmarks[anchor_points_array[i]]);
+		dst_points.push_back(landmarks[anchor_points_array[i]]);
 	}
 
-	for (int i = 0; i < deformedPoints1Array.size(); i++)
+	for (int i = 0; i < deformed_points1_array.size(); i++)
 	{
-		srcPoints.push_back(landmarks[deformedPoints1Array[i]]);
-		cv::Point2f pt = offset1 * (landmarks[deformedPoints1Array[i]] - center1) + center1;
-		dstPoints.push_back(pt);
+		constexpr float offset1 = 1.3f;
+		src_points.push_back(landmarks[deformed_points1_array[i]]);
+		cv::Point2f pt = offset1 * (landmarks[deformed_points1_array[i]] - center1) + center1;
+		dst_points.push_back(pt);
 	}
-	for (int i = 0; i < deformedPoints2Array.size(); i++)
+	for (int i = 0; i < deformed_points2_array.size(); i++)
 	{
-		srcPoints.push_back(landmarks[deformedPoints2Array[i]]);
-		cv::Point2f pt = offset2 * (landmarks[deformedPoints2Array[i]] - center2) + center2;
-		dstPoints.push_back(pt);
+		constexpr float offset2 = 1.3f;
+		src_points.push_back(landmarks[deformed_points2_array[i]]);
+		cv::Point2f pt = offset2 * (landmarks[deformed_points2_array[i]] - center2) + center2;
+		dst_points.push_back(pt);
 	}
 
 	// Adding the boundary points to keep the image stable globally
-	get_eight_boundary_points(src.size(), srcPoints);
-	get_eight_boundary_points(src.size(), dstPoints);
+	get_eight_boundary_points(src.size(), src_points);
+	get_eight_boundary_points(src.size(), dst_points);
 	// Performing moving least squares deformation on the image using the points gathered above
 	cv::Mat dst = src.clone();
-	mls_warp_image(src, srcPoints, dst, dstPoints, MlsMode::FAST);
+	mls_warp_image(src, src_points, dst, dst_points, MlsMode::FAST);
 
 	std::cout << "time taken " << (static_cast<double>(cv::getTickCount()) - t) / cv::getTickFrequency() << '\n';
 	cv::Mat combined;

@@ -252,7 +252,7 @@ void face_averaging_main()
 			std::vector<cv::Point2f> points = get_landmarks(face_detector, landmark_detector, img);
 			//std::vector<cv::Point2f> points = get_saved_points(image_names[i].substr(0, image_names[i].length() - 4) + ".txt");
 
-			if (points.size() > 0)
+			if (!points.empty())
 			{
 				all_points.push_back(points);
 				img.convertTo(img, CV_32FC3, 1 / 255.0);

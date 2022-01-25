@@ -256,10 +256,6 @@ void face_swap_video(VidcapMode vm)
     {
         win_name = "Live Feed";
     }
-    else
-    {
-        win_name = "After Blended";
-    }
 
     cv::namedWindow(win_name);
 
