@@ -80,7 +80,7 @@ enum class Filter
 	COUNT
 };
 
-static int filter_value = static_cast<int>(Filter::LIPS);
+static int filter_value = static_cast<int>(Filter::EYES);
 static int filter_color = static_cast<int>(Colors::NONE);
 
 static cv::Mat& alpha_blend(const cv::Mat& alpha, const cv::Mat& foreground, const cv::Mat& background, cv::Mat& out_image)
@@ -213,7 +213,7 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 
 	if (anim_first_pass)
 	{
-		const std::string eye_filter = util::get_data_path() + "images/filters/eyes/heart_pulse.gif";
+		const std::string eye_filter = util::get_data_path() + "images/filters/eyes/rainbow_spiral.gif";
 		
 		cv::VideoCapture gif_capture(eye_filter.c_str());
 
@@ -227,23 +227,8 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 		gif_capture.release();
 	}
 
-	//Handle both eyes
-	cv::Mat left_eye_mask= cv::Mat::zeros(size.height, size.width, CV_8UC3);
-	cv::Mat right_eye_mask = left_eye_mask.clone();
-
-	add_polygon_to_mask(left_eye_mask, landmarks, left_eye_index);
-	add_polygon_to_mask(right_eye_mask, landmarks, right_eye_index);
-
-	const cv::Point left_eye_center((landmarks[39].x + landmarks[40].x) / 2, (landmarks[39].y + landmarks[36].y) / 2);
-	const cv::Point right_eye_center((landmarks[43].x + landmarks[44].x) / 2, (landmarks[45].y + landmarks[42].y) / 2);
-
-	cv::Mat left_eye;
-	cv::Mat right_eye;
-
-	src.copyTo(left_eye, left_eye_mask);
-	src.copyTo(right_eye, right_eye_mask);
-
-	cv::Mat left_iris_mask= cv::Mat::zeros(size.height, size.width, CV_8UC3);;
+	//Mask the iris region
+	cv::Mat left_iris_mask= cv::Mat::zeros(size.height, size.width, CV_8UC3);
 	cv::Mat right_iris_mask = left_iris_mask.clone();
 
 	cv::Mat left_iris;
@@ -255,16 +240,12 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 	src.copyTo(left_iris, left_iris_mask);
 	src.copyTo(right_iris, right_iris_mask);
 
-	cv::imshow("Left Iris", left_iris);
-	cv::imshow("Right Iris", right_iris);
-	cv::waitKey(50000);
-
 	//Next blend filter into eyes
 	change_color(left_iris);
 	change_color(right_iris);
 
 	//Get current frame of anim
-	if (filter_value == static_cast<int>(Colors::SPECIAL))
+	if (filter_color == static_cast<int>(Colors::SPECIAL))
 	{
 		//If anim complete we loop it back to beginning
 		if (gif_idx_current == gif_frames.size())
@@ -272,11 +253,14 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 			gif_idx_current = 0;
 		}
 
-		gif_frame = gif_frames[gif_idx_current++];
+		gif_frame = gif_frames[gif_idx_current].clone();
+		gif_idx_current++;
+
 		cv::resize(gif_frame, gif_frame, left_iris_mask.size());
-		cv::seamlessClone(gif_frame, left_iris, left_iris_mask, left_eye_center, src, cv::MIXED_CLONE);
+		gif_frame.copyTo(left_iris, left_iris_mask);
+
 		cv::resize(gif_frame, gif_frame, right_iris_mask.size());
-		cv::seamlessClone(gif_frame, right_iris, right_iris_mask, right_eye_center, src, cv::MIXED_CLONE);
+		gif_frame.copyTo(right_iris, right_iris_mask);
 	}
 
 	left_iris.copyTo(src, left_iris_mask);
