@@ -128,37 +128,37 @@ void change_color(cv::Mat& obj)
 	case static_cast<int>(Colors::RED): //pure r modification
 		channels[0] *= .75;
 		channels[1] *= .75;
-		channels[2] *= 1.5;
+		channels[2] *= 2;
 		break;
 	case static_cast<int>(Colors::ORANGE):
 		channels[0] *= .75;
-		channels[1] *= 1.25;
-		channels[2] *= 1.5;
+		channels[1] *= 1.5;
+		channels[2] *= 2;
 		break;
 	case static_cast<int>(Colors::YELLOW):
 		channels[0] *= .75;
-		channels[1] *= 1.5;
-		channels[2] *= 1.5;
+		channels[1] *= 2;
+		channels[2] *= 2;
 		break;
 	case static_cast<int>(Colors::GREEN):
 		channels[0] *= .75;
-		channels[1] *= 1.5;
+		channels[1] *= 2;
 		channels[2] *= .75;
 		break;
 	case static_cast<int>(Colors::BLUE):
-		channels[0] *= 1.5;
+		channels[0] *= 2;
 		channels[1] *= .5;
 		channels[2] *= .5;
 		break;
 	case static_cast<int>(Colors::PURPLE):
-		channels[0] *= 1.5;
+		channels[0] *= 2;
 		channels[1] *= .75;
 		channels[2] *= .75;
 		break;
 	case static_cast<int>(Colors::PINK):
-		channels[0] *= 1.5;
+		channels[0] *= 2;
 		channels[1] *= .75;
-		channels[2] *= 1.5;
+		channels[2] *= 2;
 		break;
 	case static_cast<int>(Colors::SPECIAL):
 		channels[0] *= .5;
@@ -199,6 +199,29 @@ cv::Mat get_iris(cv::Mat eye)
 	return iris;
 }
 
+cv::Mat find_iris(cv::Mat img, cv::Mat mask)
+{
+	cv::Mat iris;
+	cv::Mat binary_iris;
+	cv::Mat morphed_iris;
+	cv::Mat channels[3];
+	cv::split(img, channels);
+
+	cv::threshold(channels[2], binary_iris, 40, 255, cv::THRESH_BINARY_INV);
+	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+	cv::dilate(binary_iris, binary_iris, kernel);
+
+	for (int i = 0; i < 3; i++)
+	{
+		channels[i] = binary_iris;
+	}
+
+	cv::merge(channels, 3, iris);
+
+	cv::multiply(mask, iris, iris);
+	return iris;
+}
+
 //TODO: Eye Change (Heart Eye Tik Tok effect)
 /*
  * Mask out eye region for both eyes (Done)
@@ -213,9 +236,9 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 
 	if (anim_first_pass)
 	{
-		const std::string eye_filter = util::get_data_path() + "images/filters/eyes/rainbow_spiral.gif";
+		const std::string eye_filter = util::get_data_path() + "images/filters/eyes/fire.gif";
 		
-		cv::VideoCapture gif_capture(eye_filter.c_str());
+		cv::VideoCapture gif_capture(eye_filter);
 
 		while (gif_capture.read(gif_frame))
 		{
@@ -227,15 +250,25 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 		gif_capture.release();
 	}
 
-	//Mask the iris region
-	cv::Mat left_iris_mask= cv::Mat::zeros(size.height, size.width, CV_8UC3);
-	cv::Mat right_iris_mask = left_iris_mask.clone();
+	const cv::Point left_eye_center((landmarks[39].x + landmarks[40].x) / 2, (landmarks[39].y + landmarks[36].y) / 2);
+	const cv::Point right_eye_center((landmarks[43].x + landmarks[44].x) / 2, (landmarks[45].y + landmarks[42].y) / 2);
 
-	cv::Mat left_iris;
-	cv::Mat right_iris;
+	cv::Mat left_eye;
+	cv::Mat right_eye;
+	cv::Mat left_eye_mask = cv::Mat::zeros(size.height, size.width, CV_8UC3);
+	cv::Mat right_eye_mask = cv::Mat::zeros(size.height, size.width, CV_8UC3);
 
-	add_polygon_to_mask(left_iris_mask, landmarks, left_iris_index);
-	add_polygon_to_mask(right_iris_mask, landmarks, right_iris_index);
+	add_polygon_to_mask(left_eye_mask, landmarks, left_eye_index);
+	add_polygon_to_mask(right_eye_mask, landmarks, right_eye_index);
+
+	src.copyTo(left_eye, left_eye_mask);
+	src.copyTo(right_eye, right_eye_mask);
+
+	cv::Mat left_iris_mask = find_iris(src, left_eye_mask);
+	cv::Mat right_iris_mask = find_iris(src, right_eye_mask);
+
+	cv::Mat left_iris = cv::Mat::zeros(size.height, size.width, CV_8UC3);
+	cv::Mat right_iris = left_iris.clone();
 
 	src.copyTo(left_iris, left_iris_mask);
 	src.copyTo(right_iris, right_iris_mask);
