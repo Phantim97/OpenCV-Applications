@@ -15,10 +15,11 @@ include_directories(${DLIB_INCLUDE_DIRECTORY})
 include_directories(${OpenCV_LIB_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/Utility)
 
+# For OCR
 include_directories($ENV{LIBS_PATH}/opencv_contrib-4.x/modules/text/include)
 
 # Add source to this project's executable.
-add_executable(FaceRecog "main.cpp" "face_rec.cpp" "face_rec.h" "face_rec_dl.h" "face_rec_dl.cpp")
-target_link_libraries(FaceRecog ${OpenCV_LIBS})
-target_link_libraries(FaceRecog ${DLIB_LIBRARIES} dlib::dlib)
-target_link_libraries(FaceRecog ${CMAKE_SOURCE_DIR}/Utility EnvUtil)
+add_executable(OCR "main.cpp" "ocr_main.h" "ocr_main.cpp")
+target_link_libraries(OCR ${OpenCV_LIBS})
+target_link_libraries(OCR ${DLIB_LIBRARIES} dlib::dlib)
+target_link_libraries(OCR ${CMAKE_SOURCE_DIR}/Utility EnvUtil)
