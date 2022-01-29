@@ -17,7 +17,7 @@ find_package(DLIB REQUIRED)
 include_directories(${DLIB_INCLUDE_DIRECTORY})
 include_directories(${OpenCV_LIB_DIR})
 
-add_library(EnvUtil STATIC "env_util.h" "env_util.cpp" "utils.cpp" "utils.h" "ml_util.h" "ml_util.cpp")
+add_library(EnvUtil STATIC "env_util.h" "env_util.cpp" "utils.cpp" "utils.h" "ml_util.h" "ml_util.cpp" "dirent.h")
 
 target_link_libraries(EnvUtil ${OpenCV_LIBS})
 target_link_libraries(EnvUtil ${DLIB_LIBRARIES} dlib::dlib)

@@ -15,7 +15,7 @@ include_directories(${DLIB_INCLUDE_DIRECTORY})
 include_directories(${OpenCV_LIB_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/Utility)
 
-include_directories($ENV{LIBS_PATH}/opencv_contrib-4.x/modules/text/include)
+include_directories($ENV{LIBS_PATH}/opencv_contrib-4.x/modules/face/include)
 
 # Add source to this project's executable.
 add_executable(FaceRecog "main.cpp" "face_rec.cpp" "face_rec.h" "face_rec_dl.h" "face_rec_dl.cpp")
