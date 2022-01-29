@@ -76,7 +76,7 @@ void getFileNames(const std::string& dir_name, std::vector<std::string>& image_f
 
     //image extensions to be found
     const std::string img_ext1 = "pgm";
-    const std::string img_ext2 = "jpg";
+    std::string img_ext2 = "jpg";
 
     std::vector<std::string> files;
 
@@ -147,7 +147,7 @@ static void read_label_name_map(const std::string& filename, std::vector<std::st
     }
 }
 
-int main(int argc, char** argv)
+void face_rec()
 {
     cv::VideoCapture cap;
     std::vector<std::string> test_files;
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
         if (!cap.isOpened())
         {
 	        std::cerr << "Unable to connect to camera\n";
-            return 1;
+            return;
         }
     }
     else
