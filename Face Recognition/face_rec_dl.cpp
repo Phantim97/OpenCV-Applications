@@ -894,6 +894,9 @@ void dlib_rec_test_dl()
         std::string text = stream.str(); // name + " " + std::to_string(minDistance);
         cv::putText(img, text, p1, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 0), 2);
     }
+
+    cv::imshow("Output", img);
+    cv::waitKey(10000);
 }
 
 void dlib_rec_dl()
