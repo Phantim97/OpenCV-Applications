@@ -2,11 +2,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing.h>
-#include <dlib/image_io.h>
-#include <opencv2/imgproc.hpp> // If you are using OpenCV 3
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 #include <string>
-#include <dlib/opencv.h>
 
 #include <functional>
 
@@ -222,13 +220,6 @@ cv::Mat find_iris(cv::Mat img, cv::Mat mask)
 	return iris;
 }
 
-//TODO: Eye Change (Heart Eye Tik Tok effect)
-/*
- * Mask out eye region for both eyes (Done)
- * Get Iris specifically
- * Seamless clone eye change
- * Add color option
- */
 cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 {
 	const cv::Size size = src.size();
