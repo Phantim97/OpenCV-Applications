@@ -166,7 +166,7 @@ void face_rec()
     }
     else
     {
-	    const std::string test_dataset_folder = util::get_data_path() + "images/FaceRec/testFaces/";
+	    const std::string test_dataset_folder = util::get_data_path() + "images/FaceRec/testFaces";
         get_file_names(test_dataset_folder, test_files);
         test_file_count = 0;
     }
@@ -189,6 +189,7 @@ void face_rec()
 	    std::cout << "Using LBPH\n";
         face_recognizer = cv::face::LBPHFaceRecognizer::create();
         face_recognizer->read("face_model_lbph.yml");
+        std::cout << "Face Recognizer Created.\n";
     }
 
     std::map<int, std::string> label_name_map;

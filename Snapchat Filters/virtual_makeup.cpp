@@ -81,17 +81,6 @@ enum class Filter
 static int filter_value = static_cast<int>(Filter::EYES);
 static int filter_color = static_cast<int>(Colors::NONE);
 
-static cv::Mat& alpha_blend(const cv::Mat& alpha, const cv::Mat& foreground, const cv::Mat& background, cv::Mat& out_image)
-{
-	cv::Mat fore;
-	cv::Mat back;
-	cv::multiply(alpha, foreground, fore, 1 / 255.0);
-	cv::multiply(cv::Scalar::all(255) - alpha, background, back, 1 / 255.0);
-	cv::add(fore, back, out_image);
-
-	return out_image;
-}
-
 static void add_polygon_to_mask(cv::Mat& mask, const std::vector<cv::Point2f>& points, const std::vector<int>& points_index)
 {
 	std::vector<cv::Point> hull_points;

@@ -43,7 +43,8 @@ void list_dir(const std::string& dir_name, std::vector<std::string>& folder_name
         	std::string temp_name = ent->d_name;
             // Read more about file types identified by dirent.h here
             // https://www.gnu.org/software/libc/manual/html_node/Directory-Entries.html
-            switch (ent->d_type) {
+            switch (ent->d_type)
+        	{
             case DT_REG:
                 file_names.push_back(temp_name);
                 break;
@@ -635,12 +636,12 @@ void dlib_rec_train_dl()
 
         // convert image from BGR to RGB
         // because Dlib used RGB format
-        cv::Mat imRGB;
-        cv::cvtColor(im, imRGB, cv::COLOR_BGR2RGB);
+        cv::Mat im_rgb;
+        cv::cvtColor(im, im_rgb, cv::COLOR_BGR2RGB);
 
         // convert OpenCV image to Dlib's cv_image object, then to Dlib's matrix object
         // Dlib's dnn module doesn't accept Dlib's cv_image template
-        dlib::matrix<dlib::rgb_pixel> im_dlib(dlib::mat(dlib::cv_image<dlib::rgb_pixel>(imRGB)));
+        dlib::matrix<dlib::rgb_pixel> im_dlib(dlib::mat(dlib::cv_image<dlib::rgb_pixel>(im_rgb)));
 
         // detect faces in image
         std::vector<dlib::rectangle> face_rects = face_detector(im_dlib);
@@ -699,16 +700,16 @@ void dlib_rec_train_dl()
     // write descriptors
     for (int m = 0; m < face_descriptors.size(); m++)
     {
-        dlib::matrix<float, 0, 1> faceDescriptor = face_descriptors[m];
-        std::vector<float> faceDescriptorVec(faceDescriptor.begin(), faceDescriptor.end());
+        dlib::matrix<float, 0, 1> face_descriptor = face_descriptors[m];
+        std::vector<float> face_descriptor_vec(face_descriptor.begin(), face_descriptor.end());
         // std::out << "Label " << faceLabels[m] << '\n';
         ofs << face_labels[m];
         ofs << ";";
-        for (int n = 0; n < faceDescriptorVec.size(); n++) 
+        for (int n = 0; n < face_descriptor_vec.size(); n++) 
         {
-            ofs << std::fixed << std::setprecision(8) << faceDescriptorVec[n];
+            ofs << std::fixed << std::setprecision(8) << face_descriptor_vec[n];
             // std::cout << n << " " << faceDescriptorVec[n] << '\n';
-            if (n == (faceDescriptorVec.size() - 1)) 
+            if (n == (face_descriptor_vec.size() - 1)) 
             {
                 ofs << "\n";  // add ; if not the last element of descriptor
             }
@@ -781,7 +782,7 @@ static void read_descriptors(const std::string& filename, std::vector<int>& face
     // value = one element of descriptor in float
     std::string value_str;
     float value;
-    std::vector<float> faceDescriptorVec;
+    std::vector<float> face_descriptor_vec;
     // read lines from file one by one
     while (std::getline(file, line))
     {
@@ -794,19 +795,19 @@ static void read_descriptors(const std::string& filename, std::vector<int>& face
             face_labels.push_back(std::atoi(face_label.c_str()));
         }
 
-        faceDescriptorVec.clear();
+        face_descriptor_vec.clear();
         // read rest of the words one by one using separator
         while (std::getline(liness, value_str, separator)) 
         {
             if (!value_str.empty()) 
             {
                 // convert descriptor element from string to float
-                faceDescriptorVec.push_back(std::atof(value_str.c_str()));
+                face_descriptor_vec.push_back(std::atof(value_str.c_str()));
             }
         }
 
         // convert face descriptor from vector of float to Dlib's matrix format
-        dlib::matrix<float, 0, 1> face_descriptor = dlib::mat(faceDescriptorVec);
+        dlib::matrix<float, 0, 1> face_descriptor = dlib::mat(face_descriptor_vec);
         face_descriptors.push_back(face_descriptor);
     }
 }
