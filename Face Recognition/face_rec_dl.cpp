@@ -68,7 +68,7 @@ void list_dir(const std::string& dir_name, std::vector<std::string>& folder_name
 }
 
 // filter files having extension ext i.e. jpg
-void filter_files(const std::string& dir_path, const std::vector<std::string>& file_names, std::vector<std::string>& filtered_file_paths, const std::string& ext, std::vector<int>& image_labels, const int index)
+static void filter_files(const std::string& dir_path, const std::vector<std::string>& file_names, std::vector<std::string>& filtered_file_paths, const std::string& ext, std::vector<int>& image_labels, const int index)
 {
     for (int i = 0; i < file_names.size(); i++)
     {
@@ -82,7 +82,7 @@ void filter_files(const std::string& dir_path, const std::vector<std::string>& f
 }
 
 template<typename T>
-void printVector(std::vector<T>& vec)
+void print_vector(std::vector<T>& vec)
 {
     for (int i = 0; i < vec.size(); i++) 
     {
@@ -93,7 +93,7 @@ void printVector(std::vector<T>& vec)
 
 #define M_PI 3.14159
 
-void similarity_transform(const std::vector<cv::Point2f>& in_points, const std::vector<cv::Point2f>& out_points, cv::Mat& tform)
+static void similarity_transform(const std::vector<cv::Point2f>& in_points, const std::vector<cv::Point2f>& out_points, cv::Mat& tform)
 {
 	const double s60 = sin(60 * M_PI / 180.0);
 	const double c60 = cos(60 * M_PI / 180.0);
@@ -127,7 +127,7 @@ void dlib_landmarks_to_points(dlib::full_object_detection& landmarks, std::vecto
     }
 }
 
-void align_face(cv::Mat& img_in, cv::Mat& img_out, const dlib::rectangle face_rect, const dlib::shape_predictor& landmark_detector, const cv::Size out_size)
+static void align_face(cv::Mat& img_in, cv::Mat& img_out, const dlib::rectangle face_rect, const dlib::shape_predictor& landmark_detector, const cv::Size out_size)
 {
 	const int h = out_size.height;
 	const int w = out_size.width;
@@ -407,7 +407,7 @@ static void read_descriptors(const std::string& filename, std::vector<int>& face
 
 constexpr float g_rec_threshold = 0.4f;
 
-void nearest_neighbor(const cv::Mat& face_descriptor_query, const std::vector<cv::Mat>& face_descriptors, const std::vector<int>& face_labels, int& label, float& min_distance)
+static void nearest_neighbor(const cv::Mat& face_descriptor_query, const std::vector<cv::Mat>& face_descriptors, const std::vector<int>& face_labels, int& label, float& min_distance)
 {
     int min_dist_index = 0;
     min_distance = 1.0;
@@ -725,7 +725,7 @@ void dlib_rec_train_dl()
 //Testing
 // find nearest face descriptor from vector of enrolled faceDescriptor
 // to a query face descriptor
-void nearest_neighbor(const dlib::matrix<float, 0, 1>& face_descriptor_query,
+static void nearest_neighbor(const dlib::matrix<float, 0, 1>& face_descriptor_query,
 	const std::vector<dlib::matrix<float, 0, 1>>& face_descriptors,
 	const std::vector<int>& face_labels, int& label, float& min_distance)
 {

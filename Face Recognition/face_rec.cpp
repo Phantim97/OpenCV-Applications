@@ -3,7 +3,6 @@
 #include <opencv2/face.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -30,7 +29,7 @@
 // 'e' = Eigen
 #define MODEL 'l'
 
-cv::Mat get_cropped_face_region(const cv::Mat& image, const std::vector<cv::Point2f>& landmarks, cv::Rect& selected_region)
+static cv::Mat get_cropped_face_region(const cv::Mat& image, const std::vector<cv::Point2f>& landmarks, cv::Rect& selected_region)
 {
 	const int x1_limit = landmarks[0].x - (landmarks[36].x - landmarks[0].x);
 	const int x2_limit = landmarks[16].x + (landmarks[16].x - landmarks[45].x);
@@ -49,7 +48,7 @@ cv::Mat get_cropped_face_region(const cv::Mat& image, const std::vector<cv::Poin
     return cropped;
 }
 
-void align_face(const cv::Mat& im_face, cv::Mat& aligned_im_face, const std::vector<cv::Point2f>& landmarks)
+static void align_face(const cv::Mat& im_face, cv::Mat& aligned_im_face, const std::vector<cv::Point2f>& landmarks)
 {
     const float l_x = landmarks[39].x;
     const float l_y = landmarks[39].y;
@@ -68,7 +67,7 @@ void align_face(const cv::Mat& im_face, cv::Mat& aligned_im_face, const std::vec
     cv::warpAffine(im_face, aligned_im_face, rot_matrix, im_face.size());
 }
 
-void get_file_names(const std::string& dir_name, std::vector<std::string>& image_fnames)
+static void get_file_names(const std::string& dir_name, std::vector<std::string>& image_fnames)
 {
     DIR* dir;
     dirent* ent;

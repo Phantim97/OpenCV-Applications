@@ -5,7 +5,6 @@
 #include <map>
 
 #include <opencv2/core.hpp>
-#include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
@@ -16,10 +15,10 @@
 #include <dlib/opencv.h>
 #include <dlib/image_processing.h>
 #include <dlib/image_processing/frontal_face_detector.h>
-#include <opencv2/calib3d.hpp>
 
-#include "dirent.h"
 #include "env_util.h"
+#include "dirent.h"
+#include "labelData.h"
 
 #define THRESHOLD 0.8
 
@@ -53,7 +52,7 @@ using anet_type = dlib::loss_metric<dlib::fc_no_bias<128, dlib::avg_pool_everyth
 // ----------------------------------------------------------------------------------------
 // function to print a vector
 template<typename T>
-void printVector(std::vector<T>& vec)
+static void print_vector(std::vector<T>& vec)
 {
     for (int i = 0; i < vec.size(); i++) 
     {
@@ -64,7 +63,7 @@ void printVector(std::vector<T>& vec)
 }
 
 // read names and labels mapping from file
-static void readLabelNameMap(const std::string& filename, std::vector<std::string>& names, std::vector<int>& labels,
+static void read_label_name_map(const std::string& filename, std::vector<std::string>& names, std::vector<int>& labels,
     std::map<int, std::string>& label_name_map, char separator = ';')
 {
     std::ifstream file(filename.c_str(), std::ifstream::in);
@@ -99,7 +98,7 @@ static void readLabelNameMap(const std::string& filename, std::vector<std::strin
 }
 
 // read descriptors saved on disk
-static void readDescriptors(const std::string& filename, std::vector<int>& faceLabels, std::vector<dlib::matrix<float, 0, 1>>& faceDescriptors, char separator = ';') {
+static void read_descriptors(const std::string& filename, std::vector<int>& faceLabels, std::vector<dlib::matrix<float, 0, 1>>& faceDescriptors, char separator = ';') {
     std::ifstream file(filename.c_str(), std::ifstream::in);
     if (!file)
     {
@@ -110,44 +109,44 @@ static void readDescriptors(const std::string& filename, std::vector<int>& faceL
     // 1st element = face label
     // rest 128 elements = descriptor elements
     std::string line;
-    std::string faceLabel;
+    std::string face_label;
     // valueStr = one element of descriptor in string format
     // value = one element of descriptor in float
-    std::string valueStr;
-    float value;
-    std::vector<float> faceDescriptorVec;
+    std::string value_str;
+    
+    std::vector<float> face_descriptor_vec;
     // read lines from file one by one
     while (getline(file, line)) 
     {
 	    std::stringstream liness(line);
         // read face label
         // read first word on a line till separator
-        std::getline(liness, faceLabel, separator);
-        if (!faceLabel.empty()) 
+        std::getline(liness, face_label, separator);
+        if (!face_label.empty()) 
         {
-            faceLabels.push_back(std::atoi(faceLabel.c_str()));
+            faceLabels.push_back(std::atoi(face_label.c_str()));
         }
 
-        faceDescriptorVec.clear();
+        face_descriptor_vec.clear();
         // read rest of the words one by one using separator
-        while (std::getline(liness, valueStr, separator))
+        while (std::getline(liness, value_str, separator))
         {
-            if (!valueStr.empty())
+            if (!value_str.empty())
             {
                 // convert descriptor element from string to float
-                faceDescriptorVec.push_back(atof(valueStr.c_str()));
+                face_descriptor_vec.push_back(atof(value_str.c_str()));
             }
         }
 
         // convert face descriptor from vector of float to Dlib's matrix format
-        dlib::matrix<float, 0, 1> faceDescriptor = dlib::mat(faceDescriptorVec);
+        dlib::matrix<float, 0, 1> faceDescriptor = dlib::mat(face_descriptor_vec);
         faceDescriptors.push_back(faceDescriptor);
     }
 }
 
 // find nearest face descriptor from vector of enrolled faceDescriptor
 // to a query face descriptor
-void nearestNeighbor(const dlib::matrix<float, 0, 1>& face_descriptor_query,
+static void nearest_neighbor(const dlib::matrix<float, 0, 1>& face_descriptor_query,
 	const std::vector<dlib::matrix<float, 0, 1>>& face_descriptors,
 	const std::vector<int>& face_labels, int& label, float& min_distance)
 {
@@ -187,16 +186,16 @@ void nearestNeighbor(const dlib::matrix<float, 0, 1>& face_descriptor_query,
 }
 
 // Reads files, folders and symbolic links in a directory
-void listdir(const std::string& dir_name, std::vector<std::string>& folder_names,
-             std::vector<std::string>& file_names,
-             std::vector<std::string>& symlink_names)
+static void list_dir(const std::string& dir_name, std::vector<std::string>& folder_names,
+	std::vector<std::string>& file_names,
+	std::vector<std::string>& symlink_names)
 {
     DIR* dir;
-    dirent* ent;
 
     if ((dir = opendir(dir_name.c_str())) != NULL)
     {
-        /* print all the files and directories within directory */
+	    dirent* ent;
+	    /* print all the files and directories within directory */
         while ((ent = readdir(dir)) != NULL) 
         {
             // ignore . and ..
@@ -220,18 +219,19 @@ void listdir(const std::string& dir_name, std::vector<std::string>& folder_names
             default:
                 break;
             }
-            // cout << temp_name << endl;
+            std::cout << "temp_name: " << temp_name << '\n';
         }
 
         std::sort(folder_names.begin(), folder_names.end());
         std::sort(file_names.begin(), file_names.end());
         std::sort(symlink_names.begin(), symlink_names.end());
+        std::cout << "Folder Sizes: " << folder_names.size() << " " << file_names.size() << " " << symlink_names.size() << '\n';
         closedir(dir);
     }
 }
 
 // filter files having extension ext i.e. jpg
-void filterFiles(const std::string dir_path, const std::vector<std::string>& file_names, std::vector<std::string>& filtered_file_paths, std::string ext, std::vector<int>& image_labels, const int index)
+static void filter_files(const std::string& dir_path, const std::vector<std::string>& file_names, std::vector<std::string>& filtered_file_paths, const std::string& ext, std::vector<int>& image_labels, const int index)
 {
     for (int i = 0; i < file_names.size(); i++) 
     {
@@ -245,7 +245,7 @@ void filterFiles(const std::string dir_path, const std::vector<std::string>& fil
     }
 }
 
-void dopple_train()
+void dopple_train(std::map<int, std::string> label_name_map)
 {
     // Initialize face detector, facial landmarks detector and face recognizer
     std::string predictor_path = util::get_model_path() +"dlib_models/shape_predictor_68_face_landmarks.dat";
@@ -266,14 +266,13 @@ void dopple_train()
     std::vector<std::string> symlink_names;
     // fileNames and symlinkNames are useless here
     // as we are looking for sub-directories only
-    listdir(face_dataset_folder, subfolders, file_names, symlink_names);
+    list_dir(face_dataset_folder, subfolders, file_names, symlink_names);
 
     // names: vector containing names of subfolders i.e. persons
     // labels: integer labels assigned to persons
     // labelNameMap: dict containing (integer label, person name) pairs
     std::vector<std::string> names;
     std::vector<int> labels;
-    std::map<int, std::string> label_name_map;
     // add -1 integer label for un-enrolled persons
     names.emplace_back("unknown");
     labels.push_back(-1);
@@ -308,9 +307,9 @@ void dopple_train()
         // folderNames and symlinkNames are useless here
         // as we are only looking for files here
         // read all files present in subFolder
-        listdir(subfolders[i], folder_names, file_names, symlink_names);
+        list_dir(subfolders[i], folder_names, file_names, symlink_names);
         // filter only jpg files
-        filterFiles(subfolders[i], file_names, image_paths, "jpg", image_labels, i);
+        filter_files(subfolders[i], file_names, image_paths, "jpg", image_labels, i);
     }
 
     // process training data
@@ -419,10 +418,9 @@ void dopple_train()
     ofs.close();
 }
 
-void dopple_test()
+void dopple_test(std::map<int, std::string> label_name_map, const std::string& test_file)
 {
     // Initialize face detector, facial landmarks detector and face recognizer
-
     std::string predictor_path = util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat";
     std::string face_recognition_model_path = util::get_model_path() + "dlib_models/dlib_face_recognition_resnet_model_v1.dat";
     dlib::frontal_face_detector face_detector = dlib::get_frontal_face_detector();
@@ -432,82 +430,100 @@ void dopple_test()
     dlib::deserialize(face_recognition_model_path) >> net;
 
     // read names, labels and labels-name-mapping from file
-    std::map<int, std::string> label_name_map;
     std::vector<std::string> names;
     std::vector<int> labels;
     const std::string label_name_file = "label_name.txt";
-    readLabelNameMap(label_name_file, names, labels, label_name_map);
+    read_label_name_map(label_name_file, names, labels, label_name_map);
 
     // read descriptors of enrolled faces from file
     const std::string face_descriptor_file = "descriptors.csv";
     std::vector<int> face_labels;
     std::vector<dlib::matrix<float, 0, 1>> face_descriptors;
-    readDescriptors(face_descriptor_file, face_labels, face_descriptors);
+    read_descriptors(face_descriptor_file, face_labels, face_descriptors);
     // read query image
     std::string image_path;
-    image_path = util::get_data_path() + "images/people/tim.jpg";
+    image_path = util::get_data_path() + "images/people/" + test_file;
     cv::Mat img = cv::imread(image_path, cv::IMREAD_COLOR);
 
     double t = cv::getTickCount();
     // convert image from BGR to RGB
     // because Dlib used RGB format
-    cv::Mat imRGB = img.clone();
-    cv::cvtColor(img, imRGB, cv::COLOR_BGR2RGB);
+    cv::Mat im_rgb = img.clone();
+    cv::cvtColor(img, im_rgb, cv::COLOR_BGR2RGB);
     // convert OpenCV image to Dlib's cv_image object, then to Dlib's matrix object
     // Dlib's dnn module doesn't accept Dlib's cv_image template
-    dlib::matrix<dlib::rgb_pixel> imDlib(dlib::mat(dlib::cv_image<dlib::rgb_pixel>(imRGB)));
+    dlib::matrix<dlib::rgb_pixel> im_dlib(dlib::mat(dlib::cv_image<dlib::rgb_pixel>(im_rgb)));
 
     // detect faces in image
-    std::vector<dlib::rectangle> faceRects = face_detector(imDlib);
-    std::cout << faceRects.size() << " Faces Detected\n";
+    std::vector<dlib::rectangle> face_rects = face_detector(im_dlib);
+    std::cout << face_rects.size() << " Faces Detected\n";
     std::string name;
 
     // Now process each face we found
-    for (int i = 0; i < faceRects.size(); i++)
+    for (int i = 0; i < face_rects.size(); i++)
     {
         // Find facial landmarks for each detected face
-        dlib::full_object_detection landmarks = landmark_detector(imDlib, faceRects[i]);
+        dlib::full_object_detection landmarks = landmark_detector(im_dlib, face_rects[i]);
 
         // object to hold preProcessed face rectangle cropped from image
         dlib::matrix<dlib::rgb_pixel> face_chip;
 
         // original face rectangle is warped to 150x150 patch.
         // Same pre-processing was also performed during training.
-        extract_image_chip(imDlib, get_face_chip_details(landmarks, 150, 0.25), face_chip);
+        extract_image_chip(im_dlib, get_face_chip_details(landmarks, 150, 0.25), face_chip);
 
         // Compute face descriptor using neural network defined in Dlib.
         // It is a 128D vector that describes the face in img identified by shape.
-        dlib::matrix<float, 0, 1> faceDescriptorQuery = net(face_chip);
+        dlib::matrix<float, 0, 1> face_descriptor_query = net(face_chip);
 
         // Find closest face enrolled to face found in frame
         int label;
-        float minDistance;
-        nearestNeighbor(faceDescriptorQuery, face_descriptors, face_labels, label, minDistance);
+        float min_distance;
+        nearest_neighbor(face_descriptor_query, face_descriptors, face_labels, label, min_distance);
         // Name of recognized person from map
         name = label_name_map[label];
 
+        std::cout << "Name: " << name << '\n';
+
         // Draw a rectangle for detected face
-        cv::Point2d p1 = cv::Point2d(faceRects[i].left(), faceRects[i].top());
-        cv::Point2d p2 = cv::Point2d(faceRects[i].right(), faceRects[i].bottom());
+        cv::Point2d p1 = cv::Point2d(face_rects[i].left(), face_rects[i].top());
+        cv::Point2d p2 = cv::Point2d(face_rects[i].right(), face_rects[i].bottom());
         cv::rectangle(img, p1, p2, cv::Scalar(0, 0, 255), 1, cv::LINE_8);
 
 		// Draw circle for face recognition
-		cv::Point2d center = cv::Point((faceRects[i].left() + faceRects[i].right()) / 2.0,
-			(faceRects[i].top() + faceRects[i].bottom()) / 2.0);
-		int radius = static_cast<int> ((faceRects[i].bottom() - faceRects[i].top()) / 2.0);
+		cv::Point2d center = cv::Point((face_rects[i].left() + face_rects[i].right()) / 2.0,
+			(face_rects[i].top() + face_rects[i].bottom()) / 2.0);
+		int radius = static_cast<int> ((face_rects[i].bottom() - face_rects[i].top()) / 2.0);
 		cv::circle(img, center, radius, cv::Scalar(0, 255, 0), 1, cv::LINE_8);
 
         // Write text on image specifying identified person and minimum distance
         std::stringstream stream;
         stream << name << " ";
-        stream << std::fixed << std::setprecision(4) << minDistance;
+        stream << std::fixed << std::setprecision(4) << min_distance;
         std::string text = stream.str(); // name + " " + std::to_string(minDistance);
         cv::putText(img, text, p1, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 0), 2);
     }
+
+    cv::imshow("Image", img);
+    cv::waitKey(50000);
 }
 
 void doppleganger()
 {
-    dopple_train();
-    dopple_test();
+    const std::string file1 = "shashikant-pedwal.jpg";
+    const std::string file2 = "sofia-solares.jpg";
+
+    const Dict label_dict = generateLabelMap();
+
+    std::map<int, std::string> label_map;
+    int iter = 0;
+
+    for (std::map<std::string, std::string>::const_iterator it = label_dict.begin(); it != label_dict.end(); it++)
+    {
+        label_map[iter] = it->second;
+    }
+
+    dopple_train(label_map);
+    dopple_test(label_map, file1);
+    dopple_test(label_map, file2);
 }
