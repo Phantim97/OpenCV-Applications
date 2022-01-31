@@ -192,11 +192,11 @@ static void list_dir(const std::string& dir_name, std::vector<std::string>& fold
 {
     DIR* dir;
 
-    if ((dir = opendir(dir_name.c_str())) != NULL)
+    if ((dir = opendir(dir_name.c_str())) != nullptr)
     {
 	    dirent* ent;
 	    /* print all the files and directories within directory */
-        while ((ent = readdir(dir)) != NULL) 
+        while ((ent = readdir(dir)) != nullptr) 
         {
             // ignore . and ..
             if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) 
@@ -219,6 +219,7 @@ static void list_dir(const std::string& dir_name, std::vector<std::string>& fold
             default:
                 break;
             }
+
             std::cout << "temp_name: " << temp_name << '\n';
         }
 
@@ -260,7 +261,7 @@ void dopple_train(std::map<int, std::string> label_name_map)
 	// data is organized assuming following structure
 	// faces folder has subfolders.
 	// each subfolder has images of a person
-    std::string face_dataset_folder = util::get_dataset_path() + "celeb_mini";
+    std::string face_dataset_folder = util::get_dataset_path() + "celeb_mini/celeb_mini";
     std::vector<std::string> subfolders;
     std::vector<std::string> file_names;
     std::vector<std::string> symlink_names;
@@ -309,7 +310,8 @@ void dopple_train(std::map<int, std::string> label_name_map)
         // read all files present in subFolder
         list_dir(subfolders[i], folder_names, file_names, symlink_names);
         // filter only jpg files
-        filter_files(subfolders[i], file_names, image_paths, "jpg", image_labels, i);
+        filter_files(subfolders[i], file_names, image_paths, "JPEG", image_labels, i);
+        std::cout << "File names paths: " << file_names.size() << '\n';
     }
 
     // process training data
@@ -483,7 +485,7 @@ void dopple_test(std::map<int, std::string> label_name_map, const std::string& t
         // Name of recognized person from map
         name = label_name_map[label];
 
-        std::cout << "Name: " << name << '\n';
+        std::cout << "Name: " << name << " || Label: " << generateLabelMap()[name] << '\n';
 
         // Draw a rectangle for detected face
         cv::Point2d p1 = cv::Point2d(face_rects[i].left(), face_rects[i].top());
@@ -498,14 +500,14 @@ void dopple_test(std::map<int, std::string> label_name_map, const std::string& t
 
         // Write text on image specifying identified person and minimum distance
         std::stringstream stream;
-        stream << name << " ";
+        stream << generateLabelMap()[name] << " ";
         stream << std::fixed << std::setprecision(4) << min_distance;
         std::string text = stream.str(); // name + " " + std::to_string(minDistance);
         cv::putText(img, text, p1, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 0), 2);
     }
 
     cv::imshow("Image", img);
-    cv::waitKey(50000);
+    cv::waitKey(5000);
 }
 
 void doppleganger()
@@ -520,10 +522,12 @@ void doppleganger()
 
     for (std::map<std::string, std::string>::const_iterator it = label_dict.begin(); it != label_dict.end(); it++)
     {
-        label_map[iter] = it->second;
+        label_map[iter++] = it->second;
     }
 
     dopple_train(label_map);
     dopple_test(label_map, file1);
     dopple_test(label_map, file2);
+    dopple_test(label_map, "tim.jpg");
+    dopple_test(label_map, "owen2.jpg");
 }
