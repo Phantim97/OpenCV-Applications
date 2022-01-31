@@ -197,7 +197,7 @@ cv::Mat get_iris(cv::Mat eye)
 	return iris;
 }
 
-cv::Mat find_iris(cv::Mat img, cv::Mat mask)
+cv::Mat find_iris(const cv::Mat& img, const cv::Mat& mask)
 {
 	cv::Mat iris;
 	cv::Mat binary_iris;
@@ -206,7 +206,7 @@ cv::Mat find_iris(cv::Mat img, cv::Mat mask)
 	cv::split(img, channels);
 
 	cv::threshold(channels[2], binary_iris, 40, 255, cv::THRESH_BINARY_INV);
-	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+	const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
 	cv::dilate(binary_iris, binary_iris, kernel);
 
 	for (int i = 0; i < 3; i++)

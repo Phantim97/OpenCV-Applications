@@ -68,7 +68,7 @@ void align_face(const cv::Mat& im_face, cv::Mat& aligned_im_face, const std::vec
     cv::warpAffine(im_face, aligned_im_face, rot_matrix, im_face.size());
 }
 
-void getFileNames(const std::string& dir_name, std::vector<std::string>& image_fnames)
+void get_file_names(const std::string& dir_name, std::vector<std::string>& image_fnames)
 {
     DIR* dir;
     dirent* ent;
@@ -76,13 +76,12 @@ void getFileNames(const std::string& dir_name, std::vector<std::string>& image_f
 
     //image extensions to be found
     const std::string img_ext1 = "pgm";
-    std::string img_ext2 = "jpg";
-
-    std::vector<std::string> files;
+    const std::string img_ext2 = "jpg";
 
     if ((dir = opendir(dir_name.c_str())) != nullptr)
     {
-        while ((ent = readdir(dir)) != nullptr)
+	    std::vector<std::string> files;
+	    while ((ent = readdir(dir)) != nullptr)
         {
             // Avoiding dummy names which are read by default
             if (strcmp(ent->d_name, ".") == 0 | strcmp(ent->d_name, "..") == 0)
@@ -168,7 +167,7 @@ void face_rec()
     else
     {
 	    const std::string test_dataset_folder = util::get_data_path() + "images/FaceRec/testFaces/";
-        getFileNames(test_dataset_folder, test_files);
+        get_file_names(test_dataset_folder, test_files);
         test_file_count = 0;
     }
 
@@ -248,9 +247,9 @@ void face_rec()
         cv::resize(aligned_im_face, aligned_im_face, cv::Size(faceHeight, faceWidth));
         aligned_im_face.convertTo(aligned_im_face, CV_32F, 1.0 / 255);
 
-        int predictedLabel = -1;
+        int predicted_label = -1;
         double score = 0.0;
-        face_recognizer->predict(aligned_im_face, predictedLabel, score);
+        face_recognizer->predict(aligned_im_face, predicted_label, score);
 
         cv::Point2d center = cv::Point2d(face_region.x + face_region.width / 2.0,
                                          face_region.y + face_region.height / 2.0);
@@ -258,7 +257,7 @@ void face_rec()
 
         cv::circle(im, center, radius, cv::Scalar(0, 255, 0), 1, cv::LINE_8);
 
-        cv::putText(im, label_name_map[predictedLabel], cv::Point(10, 100),
+        cv::putText(im, label_name_map[predicted_label], cv::Point(10, 100),
 			cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 0), 2);
 
         cv::imshow("Face Recognition demo", im);
