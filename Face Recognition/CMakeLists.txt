@@ -22,7 +22,7 @@ include_directories($ENV{LIBS_PATH}/opencv_contrib-4.x/modules/face/include)
 set(CMAKE_CXX_FLAGS "-lopencv_face")
 
 # Add source to this project's executable.
-add_executable(FaceRecog "main.cpp" "face_rec.cpp" "face_rec.h" "face_rec_dl.h" "face_rec_dl.cpp" "doppleganger.cpp" "doppleganger.h" "labelData.h" "labelData.cpp")
+add_executable(FaceRecog "main.cpp" "face_rec.cpp" "face_rec.h" "face_rec_dl.h" "face_rec_dl.cpp" "doppelganger.cpp" "doppelganger.h" "labelData.h" "labelData.cpp")
 target_link_libraries(FaceRecog ${OpenCV_LIBS})
 target_link_libraries(FaceRecog ${DLIB_LIBRARIES} dlib::dlib)
 target_link_libraries(FaceRecog ${CMAKE_SOURCE_DIR}/Utility EnvUtil)
