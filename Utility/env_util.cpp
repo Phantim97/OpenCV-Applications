@@ -23,4 +23,11 @@ namespace util
 		path += '/';
 		return path;
 	}
+
+	std::string get_tessdata_path()
+	{
+		std::string path = getenv("LIBS_PATH");
+		path += "/tesseract/tessdata";
+		return path;
+	}
 }
