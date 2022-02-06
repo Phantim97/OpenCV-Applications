@@ -15,9 +15,6 @@ include_directories(${DLIB_INCLUDE_DIRECTORY})
 include_directories(${OpenCV_LIB_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/Utility)
 
-# For OCR
-include_directories($ENV{LIBS_PATH}/opencv_contrib-4.x/modules/text/include)
-
 # Add source to this project's executable.
 add_executable(OCR "main.cpp" "ocr_main.h" "ocr_main.cpp")
 target_link_libraries(OCR ${OpenCV_LIBS})

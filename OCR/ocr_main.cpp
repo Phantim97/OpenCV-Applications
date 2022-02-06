@@ -8,11 +8,12 @@
 void ocr_driver()
 {
 	const std::string tessdata = util::get_tessdata_path();
-	cv::Mat img = cv::imread(util::get_data_path() + "/images/ocr/recipt.png");
-	cv::Ptr<cv::text::OCRTesseract> ocr = cv::text::OCRTesseract::create(tessdata.c_str());
+	const cv::Mat img = cv::imread(util::get_data_path() + "/images/ocr/recipt_big.png");
 
-	std::string data = ocr->run(img, 0);
+	const cv::Ptr<cv::text::OCRTesseract> ocr = cv::text::OCRTesseract::create(tessdata.c_str(), "eng", "0123456789abcdefghiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-\n");
+	const std::string data = ocr->run(img, -1);
 
 	std::cout << "OCR Results: " << '\n';
 	std::cout << data << '\n';
+	std::cout << "Data size: " << data.size() << '\n';
 }

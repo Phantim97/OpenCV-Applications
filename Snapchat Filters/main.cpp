@@ -6,9 +6,10 @@
 
 int main()
 {
+	//face_swap_main();
 	//face_swap_video(VidcapMode::LIVE);
 	//beardify();
 	//age_filter();
-	virtual_makeup();
+	//virtual_makeup();
 	return 0;
 }
