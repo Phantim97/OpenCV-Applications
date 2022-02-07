@@ -17,10 +17,6 @@ include_directories(${CMAKE_SOURCE_DIR}/Utility)
 
 include_directories($ENV{LIBS_PATH}/opencv_contrib-4.x/modules/face/include)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CUDNN_LIBRARY_PATH "$ENV{cuDNN}/lib/x64")
 set(CUDNN_INCLUDE_PATH "$ENV{cuDNN}/include")
 set(CMAKE_PREFIX_PATH "$ENV{LIBS_PATH}/LibTorch/Torch-1.10.0/libtorch")
@@ -40,7 +36,7 @@ include_directories("${TORCH_INCLUDE_DIRS}")
 # Python Embedding Include Directory
 include_directories("${PYTHON_INCLUDE_DIRS}")
 
-add_executable(NeuralNet "main.cpp" "lbitorch_sample.cpp" "libtorch_sample.h")
+add_executable(NeuralNet "main.cpp" "lbitorch_sample.cpp" "libtorch_sample.h" )
 target_link_libraries(NeuralNet ${OpenCV_LIBS})
 target_link_libraries(NeuralNet ${DLIB_LIBRARIES} dlib::dlib)
 target_link_libraries(NeuralNet ${CMAKE_SOURCE_DIR}/Utility EnvUtil)
