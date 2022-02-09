@@ -36,7 +36,7 @@ include_directories("${TORCH_INCLUDE_DIRS}")
 # Python Embedding Include Directory
 include_directories("${PYTHON_INCLUDE_DIRS}")
 
-add_executable(NeuralNet "main.cpp" "lbitorch_sample.cpp" "libtorch_sample.h" )
+add_executable(NeuralNet "main.cpp" "lbitorch_sample.cpp" "libtorch_sample.h"  "image_classification.cpp")
 target_link_libraries(NeuralNet ${OpenCV_LIBS})
 target_link_libraries(NeuralNet ${DLIB_LIBRARIES} dlib::dlib)
 target_link_libraries(NeuralNet ${CMAKE_SOURCE_DIR}/Utility EnvUtil)
