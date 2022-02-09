@@ -262,6 +262,8 @@ cv::Mat find_iris(cv::Mat img, cv::Mat mask)
 	return iris;
 }
 
+#include "env_util.h"
+
 cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 {
 	const cv::Size size = src.size();
@@ -269,7 +271,7 @@ cv::Mat eye_filter(cv::Mat& src, const std::vector<cv::Point2f> landmarks)
 
 	if (anim_first_pass)
 	{
-		const std::string eye_filter = "fire.gif";
+		const std::string eye_filter = util::get_data_path() + "images/filters/eyes/fire.gif";
 
 		cv::VideoCapture gif_capture(eye_filter);
 
@@ -348,7 +350,7 @@ int main()
 	cv::createTrackbar("Filter", win_name, &filter_color, static_cast<int>(Colors::COUNT) - 1);
 
 	// Load face detection and pose estimation models. Will resolve for all detection purposes
-	const std::string model_path = "../resource/lib/publicdata/models/shape_predictor_68_face_landmarks.dat";
+	const std::string model_path = util::get_model_path() + "dlib_models/shape_predictor_68_face_landmarks.dat";
 	dlib::deserialize(model_path) >> predictor;
 
 	//process input from webcam or video file
