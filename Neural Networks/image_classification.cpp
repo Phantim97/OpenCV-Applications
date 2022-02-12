@@ -18,7 +18,8 @@ uint32_t swap_endian(uint32_t val)
 /*We can find the mnist file foramt at http://yann.lecun.com/exdb/mnist/
 Ubyte file consists values like MagicNumber, NumItems, NumRows, NumCols, Data
 Here, MagicNumber is unique to type like images or labels */
-torch::Tensor read_mnist_images(const std::string& image_filename) {
+torch::Tensor read_mnist_images(const std::string& image_filename)
+{
     // Open files
     std::ifstream image_file(image_filename, std::ios::in | std::ios::binary);
 
@@ -29,22 +30,18 @@ torch::Tensor read_mnist_images(const std::string& image_filename) {
     uint32_t cols;
 
     image_file.read(reinterpret_cast<char*>(&magic), 4);
-    magic = swap_endian(magic);
+    //magic = swap_endian(magic);
 
     //2051 is magic number for images
     if (magic != 2051)
     {
-        std::cout << "Incorrect image file magic: " << magic << std::endl;
+        std::cout << "Incorrect image file magic: " << magic << '\n';
         return torch::tensor(-1);
     }
 
     image_file.read(reinterpret_cast<char*>(&num_items), 4);
-    num_items = swap_endian(num_items);
-
     image_file.read(reinterpret_cast<char*>(&rows), 4);
-    rows = swap_endian(rows);
     image_file.read(reinterpret_cast<char*>(&cols), 4);
-    cols = swap_endian(cols);
 
     const torch::Tensor tensor = torch::empty({num_items, 1, rows, cols}, torch::kByte);
     image_file.read(reinterpret_cast<char*>(tensor.data_ptr()), tensor.numel());
@@ -60,17 +57,15 @@ torch::Tensor read_mnist_labels(const std::string& label_filename)
     uint32_t num_labels;
 
     label_file.read(reinterpret_cast<char*>(&magic), 4);
-    magic = swap_endian(magic);
 
     //2049 is magic number for images
     if (magic != 2049) 
     {
-        std::cout << "Incorrect image file magic: " << magic << std::endl;
+        std::cout << "Incorrect image file magic: " << magic << '\n';
         return torch::tensor(-1);
     }
 
     label_file.read(reinterpret_cast<char*>(&num_labels), 4);
-    num_labels = swap_endian(num_labels);
 
     const torch::Tensor tensor = torch::empty(num_labels, torch::kByte);
     label_file.read(reinterpret_cast<char*>(tensor.data_ptr()), num_labels);
@@ -86,10 +81,10 @@ struct Options
     std::ofstream loss_acc_train;
     std::ofstream loss_acc_test;
     //Paths to train and test images and labels
-    const char* train_images_path = "train-images-idx3-ubyte";
-    const char* train_labels_path = "train-labels-idx1-ubyte";
-    const char* test_images_path = "t10k-images-idx3-ubyte";
-    const char* test_labels_path = "t10k-labels-idx1-ubyte";
+    const std::string train_images_path = "train-images-idx3-ubyte";
+    const std::string train_labels_path = "train-labels-idx1-ubyte";
+    const std::string test_images_path = "t10k-images-idx3-ubyte";
+    const std::string test_labels_path = "t10k-labels-idx1-ubyte";
     torch::DeviceType device = torch::kCUDA;
 };
 
@@ -125,7 +120,8 @@ struct Net : torch::nn::Module
 /*Read images from ubyte format and convert to tensors*/
 torch::Tensor process_images(const std::string& root, const bool train)
 {
-	const std::string path = root + (train ? options.train_images_path : options.test_images_path); //images_path
+    std::string path = root;
+	path.append(train ? options.train_images_path : options.test_images_path); //images_path
     torch::Tensor images = read_mnist_images(path); //refer to read-mnist.h
 
     return images;
@@ -134,26 +130,28 @@ torch::Tensor process_images(const std::string& root, const bool train)
 /*Read labels from ubyte format and convert to tensors*/
 torch::Tensor process_labels(const std::string& root, const bool train)
 {
-	const std::string path = root + (train ? options.train_labels_path : options.test_labels_path); //labels_path
+    std::string path = root;
+	path.append(train ? options.train_labels_path : options.test_labels_path); //labels_path
     torch::Tensor labels = read_mnist_labels(path);//refer to read-mnist.h
 
     return labels;
 }
 
 /*Use CustomDataset class to load any type of dataset other than inbuilt datasets*/
-class CustomDataset : public torch::data::datasets::Dataset<CustomDataset> {
+class CustomDataset : public torch::data::datasets::Dataset<CustomDataset>
+{
 private:
     /* data */
     // Should be 2 tensors
     torch::Tensor images_;
     torch::Tensor labels_;
-    size_t img_size;
+    size_t img_size_;
 public:
-    CustomDataset(const std::string& root, bool train)
+    CustomDataset(const std::string& root, const bool train)
 	{
         images_ = process_images(root, train);
         labels_ = process_labels(root, train);
-        img_size = images_.size(0);
+        img_size_ = images_.size(0);
     }
 
     /*Returns the data sample at the given `index*/
@@ -167,7 +165,7 @@ public:
 
     torch::optional<size_t> size() const override
 	{
-        return img_size;
+        return img_size_;
     }
 };
 
@@ -180,16 +178,16 @@ void train(const std::shared_ptr<Net>& network, DataLoader& loader, torch::optim
     float Loss = 0;
     float Acc = 0;
 
-    for (auto& batch : loader) 
+    for (torch::data::Example<>& batch : loader)
     {
-        auto data = batch.data.to(options.device);
-        auto targets = batch.target.to(options.device).view({ -1 });
+	    const torch::Tensor data = batch.data.to(options.device);
+        torch::Tensor targets = batch.target.to(options.device).view({ -1 });
         // Execute the model on the input data
         torch::Tensor output = network->forward(data);
 
         //Using mean square error loss function to compute loss
         torch::Tensor loss = torch::nll_loss(output, targets);
-        auto acc = output.argmax(1).eq(targets).sum();
+        torch::Tensor acc = output.argmax(1).eq(targets).sum();
 
         // Reset gradients
         optimizer.zero_grad();
@@ -198,8 +196,8 @@ void train(const std::shared_ptr<Net>& network, DataLoader& loader, torch::optim
         //Update the parameters
         optimizer.step();
 
-        Loss += loss.template item<float>();
-        Acc += acc.template item<float>();
+        Loss += loss.item<float>();
+        Acc += acc.item<float>();
     }
 
     if (index++ % options.log_interval == 0)
@@ -207,8 +205,7 @@ void train(const std::shared_ptr<Net>& network, DataLoader& loader, torch::optim
 	    const size_t end = data_size;
 
         std::cout << "Train Epoch: " << epoch << " " << end << "/" << data_size
-            << "\tLoss: " << Loss / end << "\tAcc: " << Acc / end
-            << '\n';
+            << "\tLoss: " << Loss / end << "\tAcc: " << Acc / end << '\n';
     }
 }
 
@@ -220,10 +217,10 @@ void test(const std::shared_ptr<Net>& network, DataLoader& loader, const size_t 
     float Loss = 0, Acc = 0;
     int display_count = 0;
 
-    for (const auto& batch : loader) 
+    for (const torch::data::Example<>& batch : loader)
     {
-        auto data = batch.data.to(options.device);
-        auto targets = batch.target.to(options.device).view({ -1 });
+        torch::Tensor data = batch.data.to(options.device);
+        torch::Tensor targets = batch.target.to(options.device).view({-1});
 
         torch::Tensor output = network->forward(data);
 
@@ -253,10 +250,10 @@ void test(const std::shared_ptr<Net>& network, DataLoader& loader, const size_t 
         }
 
         torch::Tensor loss = torch::nll_loss(output, targets);
-        auto acc = output.argmax(1).eq(targets).sum();
+        torch::Tensor acc = output.argmax(1).eq(targets).sum();
 
         Loss += loss.item<float>();
-        Acc += acc.template item<float>();
+        Acc += acc.item<float>();
     }
 
     if (index++ % options.log_interval == 0)
@@ -278,6 +275,7 @@ void classification_main()
     torch::data::datasets::MapDataset<CustomDataset, torch::data::transforms::Stack<>> train_dataset =
 	    CustomDataset(root_string, is_train).map(torch::data::transforms::Stack<>());
     /*Data Loader provides options to speed up the data loading like batch size, number of workers*/
+
     const std::unique_ptr<torch::data::StatelessDataLoader<
 	    torch::data::datasets::MapDataset<CustomDataset, torch::data::transforms::Stack<>>,
 	    torch::data::samplers::RandomSampler>> train_loader = torch::data::make_data_loader<
@@ -290,7 +288,7 @@ void classification_main()
     torch::data::datasets::MapDataset<CustomDataset, torch::data::transforms::Stack<>> test_dataset =
 	    CustomDataset(root_string, false).map(torch::data::transforms::Stack<>());
 
-	const std::unique_ptr<torch::data::StatelessDataLoader<
+    const std::unique_ptr<torch::data::StatelessDataLoader<
 	    torch::data::datasets::MapDataset<CustomDataset, torch::data::transforms::Stack<>>,
 	    torch::data::samplers::RandomSampler>> test_loader = torch::data::make_data_loader<
 	    torch::data::samplers::RandomSampler>(
@@ -299,7 +297,9 @@ void classification_main()
     const unsigned long long test_size = test_dataset.size().value();
 
     /*Create Feed forward network*/
+
     const std::shared_ptr<Net> net = std::make_shared<Net>();
+
     // torch::load(net, "net.pt"); /*To use trained model*/
 
     /*Using stochastic gradient descent optimizer with learning rate 0.01*/

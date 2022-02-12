@@ -169,6 +169,9 @@ std::pair<Data, Data> read_info()
 // Linear Regression Model
 struct Net final : torch::nn::Module
 {
+    /*Initilaize the constructor with null pointer. More details given in the reference*/
+    torch::nn::Linear neuron{ nullptr };
+
     /*
     Network for Linear Regression is just a single neuron (i.e. one Dense Layer)
     Usage: auto net = std::make_shared<Net>(num_features, num_outputs)
@@ -179,16 +182,13 @@ struct Net final : torch::nn::Module
     }
 
     torch::Tensor forward(torch::Tensor x)
-	{
+    {
         /*Convert row tensor to column tensor*/
-        x = x.reshape({ x.size(0), -1 });
+        torch::Tensor res = x.reshape({ x.size(0), -1 });
         /*Pass the input tensor through linear function*/
-        x = neuron->forward(x);
-        return x;
+        res = neuron->forward(res);
+        return res;
     }
-
-    /*Initilaize the constructor with null pointer. More details given in the reference*/
-    torch::nn::Linear neuron{ nullptr };
 };
 
 template <typename DataLoader>
@@ -200,13 +200,13 @@ const size_t epoch, const size_t data_size)
     network->train();
     float Loss = 0;
 
-    for (auto& batch : loader)
+    for (torch::data::Example<>& batch : loader)
     {
 	    const torch::Tensor data = batch.data.to(options.device);
         torch::Tensor targets = batch.target.to(options.device).view({ -1 });
         // Execute the model on the input data
 
-        torch::Tensor output = network->forward(data);
+        torch::Tensor output = network->forward(data)/*.reshape({static_cast<long long>(options.train_batch_size)})*/;
 
         //Using mean square error loss function to compute loss
         torch::Tensor loss = torch::mse_loss(output, targets);
@@ -235,12 +235,12 @@ void test(const std::shared_ptr<Net>& network, DataLoader& loader, size_t data_s
 {
     network->eval();
 
-    for (const auto& batch : loader)
+    for (const torch::data::Example<>& batch : loader)
     {
 	    const torch::Tensor data = batch.data.to(options.device);
         const torch::Tensor targets = batch.target.to(options.device).view({ -1 });
 
-        const torch::Tensor output = network->forward(data);
+        const torch::Tensor output = network->forward(data)/*.reshape({static_cast<long long>(options.test_batch_size)})*/;
         std::cout << "Predicted:" << output[0].item<float>() << "\t" << "Ground truth: "
             << targets[1].item<float>() << '\n';
         std::cout << "Predicted:" << output[1].item<float>() << "\t" << "Ground truth: "
@@ -303,10 +303,12 @@ void linear_regression()
     /*Create Linear  Regression Network*/
     const std::shared_ptr<Net> net = std::make_shared<Net>(13, 1);
 
+    std::cout << "Created net\n";
+
     /*Moving model parameters to correct device*/
     net->to(options.device);
     /*Using stochastic gradient descent optimizer with learning rate 0.000001*/
-    torch::optim::SGD optimizer(net->parameters(), torch::optim::SGDOptions(0.000001));
+    torch::optim::SGD optimizer(net->parameters(), torch::optim::SGDOptions(0.0000001));
 
     std::cout << "Training...\n";
     for (size_t i = 0; i < options.epochs; ++i) 

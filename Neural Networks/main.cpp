@@ -3,8 +3,8 @@
 
 int main()
 {
-	//linear_regression();
-	classification_main();
+	linear_regression();
+	//classification_main();
     //net_test();
 	return 0;
 }

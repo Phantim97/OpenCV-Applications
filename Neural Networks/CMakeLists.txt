@@ -47,6 +47,8 @@ target_link_libraries(NeuralNet "${PYTHON_LIBRARIES}")
 # Link Torch Libraries
 target_link_libraries(NeuralNet "${TORCH_LIBRARIES}")
 
+set_property(TARGET NeuralNet PROPERTY CXX_STANDARD 14)
+
 file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   add_custom_command(TARGET NeuralNet
                      POST_BUILD
