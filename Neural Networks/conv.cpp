@@ -93,21 +93,21 @@ struct Net : torch::nn::Module
 	{
         //Convolutional layer 1: 32 filters, 3x3 Kernel size, padding=1
         //torch::nn::Conv2dOptions(input_channels, output_channels, kernel_size).padding(p).stride(s) and similarly other options
-        conv1_1 = register_module("conv1_1", torch::nn::Conv2d(torch::nn::Conv2dOptions(1, 32, 3).padding({ 1 })));
+        conv1_1 = register_module("conv1_1", torch::nn::ConvTranspose2d(torch::nn::ConvTranspose2dOptions(1, 32, 3).padding(1)));
         //Convolutional layer 2: 32 filters, 3x3 Kernel size, padding=0
         conv1_2 = register_module("conv1_2", torch::nn::Conv2d(torch::nn::Conv2dOptions(32, 32, 3)));
         // Insert pool layer (poolsize-[2,2])
         dp1 = register_module("dp1", torch::nn::Dropout(0.25));
 
         //Convolutional layer 3: 64 filters, 3x3 Kernel size, padding=1
-        conv2_1 = register_module("conv2_1", torch::nn::Conv2d(torch::nn::Conv2dOptions(32, 64, 3).padding({ 1 })));
+        conv2_1 = register_module("conv2_1", torch::nn::ConvTranspose2d(torch::nn::ConvTranspose2dOptions(32, 64, 3).padding(1)));
         //Convolutional layer 4: 64 filters, 3x3 Kernel size, padding=0
         conv2_2 = register_module("conv2_2", torch::nn::Conv2d(torch::nn::Conv2dOptions(64, 64, 3)));
         // Insert pool layer (poolsize-[2,2])
         dp2 = register_module("dp2", torch::nn::Dropout(0.25));
 
         //Convolutional layer 5: 64 filters, 3x3 Kernel size, padding=1
-        conv3_1 = register_module("conv3_1", torch::nn::Conv2d(torch::nn::Conv2dOptions(64, 64, 3).padding({ 1 })));
+        conv3_1 = register_module("conv3_1", torch::nn::ConvTranspose2d(torch::nn::ConvTranspose2dOptions(64, 64, 3).padding(1)));
         //Convolutional layer 6: 32 filters, 3x3 Kernel size, padding=0
         conv3_2 = register_module("conv3_2", torch::nn::Conv2d(torch::nn::Conv2dOptions(64, 64, 3)));
         // Insert pool layer (poolsize-[2,2])
@@ -147,11 +147,11 @@ struct Net : torch::nn::Module
     }
 
     // Declare layers
-    torch::nn::Conv2d conv1_1{ nullptr };
+    torch::nn::ConvTranspose2d conv1_1{ nullptr };
     torch::nn::Conv2d conv1_2{ nullptr };
-    torch::nn::Conv2d conv2_1{ nullptr };
+    torch::nn::ConvTranspose2d conv2_1{ nullptr };
     torch::nn::Conv2d conv2_2{ nullptr };
-    torch::nn::Conv2d conv3_1{ nullptr };
+    torch::nn::ConvTranspose2d conv3_1{ nullptr };
     torch::nn::Conv2d conv3_2{ nullptr };
     torch::nn::Dropout dp1{ nullptr }, dp2{ nullptr }, dp3{ nullptr };
 
