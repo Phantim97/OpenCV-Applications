@@ -36,7 +36,7 @@ include_directories("${TORCH_INCLUDE_DIRS}")
 # Python Embedding Include Directory
 include_directories("${PYTHON_INCLUDE_DIRS}")
 
-add_executable(ObjectDetect "main.cpp")
+add_executable(ObjectDetect "main.cpp" "single_shot.cpp" "single_shot.h" "yolo.h" "yolo.cpp")
 
 target_link_libraries(ObjectDetect ${OpenCV_LIBS})
 target_link_libraries(ObjectDetect ${DLIB_LIBRARIES} dlib::dlib)

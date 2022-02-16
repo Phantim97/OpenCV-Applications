@@ -1,0 +1,2 @@
+void yolo_main()
+{}
