@@ -36,7 +36,7 @@ include_directories("${TORCH_INCLUDE_DIRS}")
 # Python Embedding Include Directory
 include_directories("${PYTHON_INCLUDE_DIRS}")
 
-add_executable(Pretrained "main.cpp")
+add_executable(Pretrained "main.cpp" "torchscript_to_libtorch.cpp" "torchscript_to_libtorch2.cpp")
 
 target_link_libraries(Pretrained ${OpenCV_LIBS})
 target_link_libraries(Pretrained ${DLIB_LIBRARIES} dlib::dlib)
