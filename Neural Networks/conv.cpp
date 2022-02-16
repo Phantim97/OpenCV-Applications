@@ -29,7 +29,7 @@ static torch::Tensor read_mnist_images(const std::string& image_filename)
     uint32_t cols;
 
     image_file.read(reinterpret_cast<char*>(&magic), 4);
-    //magic = swap_endian(magic);
+    magic = swap_endian(magic);
 
     //2051 is magic number for images
     if (magic != 2051)
@@ -71,13 +71,14 @@ static torch::Tensor read_mnist_labels(const std::string& label_filename)
     return tensor.to(torch::kInt64);
 }
 
-
 struct Options
 {
 	int batch_size = 256; //Batch size
 	size_t epochs = 10; // Number of epochs
 	size_t logInterval = 20;
 	//Paths to train and test images and labels
+    std::ofstream loss_acc_train;
+    std::ofstream loss_acc_test;
 	const std::string trainImagesPath = "train-images-idx3-ubyte";
 	const std::string trainLabelsPath = "train-labels-idx1-ubyte";
 	const std::string testImagesPath = "t10k-images-idx3-ubyte";

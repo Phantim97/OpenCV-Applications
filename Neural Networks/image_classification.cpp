@@ -9,7 +9,7 @@
 #include "env_util.h"
 
 //Read mnist
-uint32_t swap_endian(uint32_t val)
+static uint32_t swap_endian(uint32_t val)
 {
     val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
     return (val << 16) | (val >> 16);
@@ -18,7 +18,7 @@ uint32_t swap_endian(uint32_t val)
 /*We can find the mnist file foramt at http://yann.lecun.com/exdb/mnist/
 Ubyte file consists values like MagicNumber, NumItems, NumRows, NumCols, Data
 Here, MagicNumber is unique to type like images or labels */
-torch::Tensor read_mnist_images(const std::string& image_filename)
+static torch::Tensor read_mnist_images(const std::string& image_filename)
 {
     // Open files
     std::ifstream image_file(image_filename, std::ios::in | std::ios::binary);
@@ -30,7 +30,7 @@ torch::Tensor read_mnist_images(const std::string& image_filename)
     uint32_t cols;
 
     image_file.read(reinterpret_cast<char*>(&magic), 4);
-    //magic = swap_endian(magic);
+    magic = swap_endian(magic);
 
     //2051 is magic number for images
     if (magic != 2051)
@@ -49,7 +49,7 @@ torch::Tensor read_mnist_images(const std::string& image_filename)
     return tensor.to(torch::kFloat32).div_(255);
 }
 
-torch::Tensor read_mnist_labels(const std::string& label_filename)
+static torch::Tensor read_mnist_labels(const std::string& label_filename)
 {
     std::ifstream label_file(label_filename, std::ios::in | std::ios::binary);
 
@@ -118,7 +118,7 @@ struct Net : torch::nn::Module
 };
 
 /*Read images from ubyte format and convert to tensors*/
-torch::Tensor process_images(const std::string& root, const bool train)
+static torch::Tensor process_images(const std::string& root, const bool train)
 {
     std::string path = root;
 	path.append(train ? options.train_images_path : options.test_images_path); //images_path
@@ -128,7 +128,7 @@ torch::Tensor process_images(const std::string& root, const bool train)
 }
 
 /*Read labels from ubyte format and convert to tensors*/
-torch::Tensor process_labels(const std::string& root, const bool train)
+static torch::Tensor process_labels(const std::string& root, const bool train)
 {
     std::string path = root;
 	path.append(train ? options.train_labels_path : options.test_labels_path); //labels_path
