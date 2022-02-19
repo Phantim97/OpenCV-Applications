@@ -1,11 +1,12 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import cv2
+import os
 
-# streamlit run streamlit_sample.py to deploy
+# py -m streamlit run streamlit_sample.py to deploy (Windows)
 
 # Image path
-path = "dog.jpg"
+path = os.environ["DATA_PATH"] + "/images/animals/dog.jpg"
 
 st.title("Web app using Streamlit")
 
